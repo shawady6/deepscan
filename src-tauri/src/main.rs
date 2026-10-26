@@ -67,12 +67,64 @@ async fn save_file(app: AppHandle, name: String, content: String, _kind: Option<
     Ok(path.to_string_lossy().to_string())
 }
 
+// ---- Repair tab
+#[tauri::command]
+fn repair_state() -> Value {
+    core::repair::repair_state()
+}
+#[tauri::command]
+async fn health_check(id: String) -> Value {
+    blocking(move || core::repair::health_check(&id)).await
+}
+#[tauri::command]
+async fn bloat_scan() -> Value {
+    blocking(|| core::repair::bloat_scan()).await
+}
+#[tauri::command]
+async fn bloat_remove(ids: Vec<String>) -> Value {
+    blocking(move || core::repair::bloat_remove(&ids)).await
+}
+#[tauri::command]
+async fn tweaks_apply(ids: Vec<String>) -> Value {
+    blocking(move || core::repair::tweaks_apply(&ids)).await
+}
+#[tauri::command]
+async fn history_undo(id: String) -> Value {
+    blocking(move || core::repair::history_undo(&id)).await
+}
+#[tauri::command]
+fn fix_script(id: String) -> Value {
+    core::repair::fix_script(&id)
+}
+#[tauri::command]
+async fn fix_run(id: String) -> Value {
+    blocking(move || core::repair::fix_run(&id)).await
+}
+#[tauri::command]
+async fn restore_info() -> Value {
+    blocking(|| core::repair::restore_info()).await
+}
+#[tauri::command]
+async fn restore_create() -> Value {
+    blocking(|| core::repair::restore_create()).await
+}
+#[tauri::command]
+async fn restore_open() -> Value {
+    blocking(|| core::repair::restore_open()).await
+}
+#[tauri::command]
+async fn restart_now() -> Value {
+    blocking(|| core::repair::restart_now()).await
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(Live(Mutex::new(core::LiveState::new())))
         .invoke_handler(tauri::generate_handler![
-            scan, updates, public_ip, run_speedtest, live, speed_history, app_info, set_settings, save_file
+            scan, updates, public_ip, run_speedtest, live, speed_history, app_info, set_settings, save_file,
+            repair_state, health_check, bloat_scan, bloat_remove, tweaks_apply, history_undo, fix_script, fix_run,
+            restore_info, restore_create, restore_open, restart_now
         ])
         .run(tauri::generate_context!())
         .expect("failed to start DeepScan");

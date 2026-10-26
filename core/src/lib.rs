@@ -1,5 +1,6 @@
 //! DeepScan core: collectors, speed test and settings. No GUI code here, so it builds and tests anywhere.
 pub mod collect;
+pub mod repair;
 mod demo;
 pub mod speed;
 pub mod store;
@@ -82,6 +83,18 @@ mod tests {
         assert_eq!(super::collect::__ms("Reply from 1.1.1.1: bytes=32 time=14ms TTL=57"), Some(14.0));
         assert_eq!(super::collect::__ms("Reply from 1.1.1.1: bytes=32 time<1ms TTL=57"), Some(1.0));
         assert_eq!(super::collect::__ms("64 bytes from x: icmp_seq=1 ttl=57 time=0.52 ms"), Some(0.52));
+    }
+
+    #[test]
+    fn repair_catalog_is_consistent() {
+        use crate::repair::*;
+        let ids: Vec<_> = TWEAKS.iter().map(|t| t.id).collect();
+        assert_eq!(ids.len(), { let mut x = ids.clone(); x.sort(); x.dedup(); x.len() });
+        assert!(FIXES.iter().all(|f| !f.script.trim().is_empty()));
+        // every fix referenced by a health check exists
+        for c in CHECK_IDS { let r = health_check(c.0); if let Some(f) = r["fix"].as_str() { assert!(f == "restart" || FIXES.iter().any(|x| x.id == f), "{f}"); } }
+        assert_eq!(repair_state()["tweaks"].as_array().unwrap().len(), TWEAKS.len());
+        assert!(bloat_scan()["items"].is_array());
     }
 
     #[test]

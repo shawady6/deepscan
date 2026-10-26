@@ -65,3 +65,35 @@ pub fn add_speed_result(result: &Value) {
     let keep = hist[hist.len().saturating_sub(100)..].to_vec();
     write("speed_history.json", &Value::Array(keep));
 }
+
+// ------------------------------------------------------------ repair history
+pub fn repair_history() -> Vec<Value> {
+    let a = read("repair_history.json", json!([])).as_array().cloned().unwrap_or_default();
+    a.into_iter().rev().take(20).collect() // newest first
+}
+
+pub fn add_history(mut entry: Value) -> String {
+    let id = chrono::Local::now().timestamp_millis().to_string();
+    entry["id"] = json!(id);
+    entry["ts"] = json!(chrono::Local::now().format("%Y-%m-%d %H:%M").to_string());
+    entry["undone"] = json!(false);
+    let mut all = read("repair_history.json", json!([])).as_array().cloned().unwrap_or_default();
+    all.push(entry);
+    let keep = all[all.len().saturating_sub(100)..].to_vec();
+    write("repair_history.json", &Value::Array(keep));
+    id
+}
+
+pub fn history_entry(id: &str) -> Option<Value> {
+    read("repair_history.json", json!([])).as_array()?.iter().find(|e| e["id"] == id).cloned()
+}
+
+pub fn mark_undone(id: &str) {
+    let mut all = read("repair_history.json", json!([])).as_array().cloned().unwrap_or_default();
+    for e in all.iter_mut() {
+        if e["id"] == id {
+            e["undone"] = json!(true);
+        }
+    }
+    write("repair_history.json", &Value::Array(all));
+}

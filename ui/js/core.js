@@ -11,6 +11,7 @@ const ICONS = {
   software: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16M9 9v11"/>',
   network: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
   security: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  repair: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>',
   reports: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
@@ -20,7 +21,7 @@ const icon = (name, size = 18) => `<svg width="${size}" height="${size}" viewBox
 
 const NAV = [
   ['overview', 'Overview'], ['hardware', 'Hardware'], ['storage', 'Storage'], ['software', 'Software'],
-  ['network', 'Network'], ['security', 'Security'], ['reports', 'Reports'],
+  ['network', 'Network'], ['security', 'Security'], ['repair', 'Repair'], ['reports', 'Reports'],
 ];
 const STEPS = [
   ['hardware', 'Hardware and sensors'], ['storage', 'Storage and health'], ['network', 'Network and latency'],
@@ -68,7 +69,10 @@ const DS = {
 };
 
 // Positional arguments of each backend command (Tauri wants a named-argument object).
-const API_ARGS = { scan: ['step'], set_settings: ['patch'], save_file: ['name', 'content', 'kind'] };
+const API_ARGS = {
+  scan: ['step'], set_settings: ['patch'], save_file: ['name', 'content', 'kind'],
+  health_check: ['id'], bloat_remove: ['ids'], tweaks_apply: ['ids'], history_undo: ['id'], fix_script: ['id'], fix_run: ['id'],
+};
 async function api(name, ...args) {
   const T = window.__TAURI__;
   if (T && T.core) {

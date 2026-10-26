@@ -59,6 +59,11 @@ pub fn is_admin() -> bool {
 
 /// Run a command, return stdout, kill it after `timeout`.
 pub fn run_cmd(cmd: &mut Command, timeout: Duration) -> Option<Vec<u8>> {
+    run_cmd_status(cmd, timeout).map(|(_, out)| out)
+}
+
+/// Like `run_cmd` but also returns whether the command exited with success (false when it had to be killed).
+pub fn run_cmd_status(cmd: &mut Command, timeout: Duration) -> Option<(bool, Vec<u8>)> {
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -72,9 +77,13 @@ pub fn run_cmd(cmd: &mut Command, timeout: Duration) -> Option<Vec<u8>> {
         buf
     });
     let start = Instant::now();
+    let mut success = false;
     loop {
         match child.try_wait() {
-            Ok(Some(_)) => break,
+            Ok(Some(st)) => {
+                success = st.success();
+                break;
+            }
             Ok(None) if start.elapsed() < timeout => std::thread::sleep(Duration::from_millis(40)),
             _ => {
                 let _ = child.kill();
@@ -83,7 +92,40 @@ pub fn run_cmd(cmd: &mut Command, timeout: Duration) -> Option<Vec<u8>> {
             }
         }
     }
-    reader.join().ok()
+    reader.join().ok().map(|b| (success, b))
+}
+
+/// Command output as text: handles UTF-16 (sfc.exe) and drops NUL characters.
+pub fn decode_output(bytes: &[u8]) -> String {
+    if bytes.len() >= 2 && bytes[1] == 0 {
+        let u: Vec<u16> = bytes.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
+        return String::from_utf16_lossy(&u).replace('\0', "");
+    }
+    String::from_utf8_lossy(bytes).replace('\0', "")
+}
+
+fn encode_ps(script: &str) -> String {
+    use base64::Engine;
+    let bytes: Vec<u8> = script.encode_utf16().flat_map(|u| u.to_le_bytes()).collect();
+    base64::engine::general_purpose::STANDARD.encode(bytes)
+}
+
+/// Run a PowerShell script for its effect. Returns (success, combined output text).
+/// Errors stop the script (`$ErrorActionPreference='Stop'`); scripts mark best-effort steps themselves.
+pub fn ps_run(script: &str, timeout_s: u64) -> (bool, String) {
+    if !IS_WIN {
+        return (false, "Windows only".into());
+    }
+    let full = format!(
+        "$ProgressPreference='SilentlyContinue';[Console]::OutputEncoding=[Text.Encoding]::UTF8;$ErrorActionPreference='Stop';\
+         try {{ & {{ {script} }} 2>&1 | Out-String -Width 200 }} catch {{ ($_ | Out-String); exit 1 }}"
+    );
+    let mut cmd = Command::new("powershell.exe");
+    cmd.args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", &encode_ps(&full)]);
+    match run_cmd_status(&mut cmd, Duration::from_secs(timeout_s)) {
+        Some((ok, out)) => (ok, decode_output(&out).trim().to_string()),
+        None => (false, "Could not start PowerShell.".into()),
+    }
 }
 
 /// Run a PowerShell script that prints JSON and return the parsed value.
@@ -92,12 +134,10 @@ pub fn ps_json(script: &str, timeout_s: u64) -> Option<Value> {
     if !IS_WIN {
         return None;
     }
-    use base64::Engine;
     let full = format!(
         "$ProgressPreference='SilentlyContinue';$ErrorActionPreference='SilentlyContinue';[Console]::OutputEncoding=[Text.Encoding]::UTF8;{script}"
     );
-    let bytes: Vec<u8> = full.encode_utf16().flat_map(|u| u.to_le_bytes()).collect();
-    let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
+    let encoded = encode_ps(&full);
     let mut cmd = Command::new("powershell.exe");
     cmd.args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", &encoded]);
     let out = run_cmd(&mut cmd, Duration::from_secs(timeout_s))?;
