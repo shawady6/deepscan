@@ -1,0 +1,134 @@
+{
+ "demo": true,
+ "score": 74,
+ "checks": [
+  {
+   "id": "defender",
+   "group": "Protection",
+   "name": "Microsoft Defender",
+   "detail": "Real-time protection is on, definitions are 0 days old",
+   "status": "ok",
+   "advice": ""
+  },
+  {
+   "id": "firewall",
+   "group": "Protection",
+   "name": "Windows Firewall",
+   "detail": "Domain, Private and Public profiles are on",
+   "status": "ok",
+   "advice": ""
+  },
+  {
+   "id": "secureboot",
+   "group": "Protection",
+   "name": "Secure Boot",
+   "detail": "Enabled",
+   "status": "ok",
+   "advice": ""
+  },
+  {
+   "id": "tpm",
+   "group": "Protection",
+   "name": "TPM",
+   "detail": "Present and ready",
+   "status": "ok",
+   "advice": ""
+  },
+  {
+   "id": "bitlocker",
+   "group": "Protection",
+   "name": "BitLocker",
+   "detail": "C: protected · D: not protected",
+   "status": "warn",
+   "advice": "Turn on BitLocker for D: from Control Panel > BitLocker Drive Encryption."
+  },
+  {
+   "id": "uac",
+   "group": "Accounts and access",
+   "name": "User Account Control",
+   "detail": "Enabled",
+   "status": "ok",
+   "advice": ""
+  },
+  {
+   "id": "admins",
+   "group": "Accounts and access",
+   "name": "Local administrators",
+   "detail": "2 accounts in the Administrators group",
+   "status": "ok",
+   "advice": ""
+  },
+  {
+   "id": "rdp",
+   "group": "Accounts and access",
+   "name": "Remote Desktop (RDP)",
+   "detail": "Enabled",
+   "status": "warn",
+   "advice": "Turn it off in Settings > System > Remote Desktop if you do not use it."
+  },
+  {
+   "id": "smb1",
+   "group": "Network and updates",
+   "name": "SMBv1 protocol",
+   "detail": "Old and insecure, still turned on",
+   "status": "bad",
+   "advice": "Run in PowerShell as admin: Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol"
+  },
+  {
+   "id": "ports",
+   "group": "Network and updates",
+   "name": "Listening ports",
+   "detail": "2 ports worth reviewing (445, 3389)",
+   "status": "warn",
+   "advice": "Close ports you do not need or block them in the firewall."
+  },
+  {
+   "id": "reboot",
+   "group": "Network and updates",
+   "name": "Pending restart",
+   "detail": "A restart is waiting",
+   "status": "warn",
+   "advice": "Restart the PC to finish installing updates."
+  },
+  {
+   "id": "updates",
+   "group": "Network and updates",
+   "name": "Windows updates",
+   "detail": "Checking...",
+   "status": "unknown",
+   "advice": ""
+  }
+ ],
+ "ports": [
+  {
+   "port": 135,
+   "process": "svchost.exe",
+   "scope": "Local network",
+   "flag": "ok"
+  },
+  {
+   "port": 445,
+   "process": "System",
+   "scope": "Local network",
+   "flag": "review"
+  },
+  {
+   "port": 3389,
+   "process": "svchost.exe",
+   "scope": "Local network",
+   "flag": "review"
+  },
+  {
+   "port": 5040,
+   "process": "svchost.exe",
+   "scope": "This PC only",
+   "flag": "ok"
+  },
+  {
+   "port": 8080,
+   "process": "nginx.exe",
+   "scope": "This PC only",
+   "flag": "ok"
+  }
+ ]
+}

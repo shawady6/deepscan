@@ -1,0 +1,134 @@
+{
+ "demo": true,
+ "programs": [
+  {
+   "name": "Google Chrome",
+   "publisher": "Google",
+   "version": "141.0",
+   "size_mb": 612,
+   "installed": "2025-11-02"
+  },
+  {
+   "name": "Microsoft Office 2021",
+   "publisher": "Microsoft",
+   "version": "16.0",
+   "size_mb": 4100,
+   "installed": "2024-03-14"
+  },
+  {
+   "name": "Visual Studio Code",
+   "publisher": "Microsoft",
+   "version": "1.105",
+   "size_mb": 380,
+   "installed": "2025-02-20"
+  },
+  {
+   "name": "7-Zip",
+   "publisher": "Igor Pavlov",
+   "version": "24.08",
+   "size_mb": 6,
+   "installed": "2024-09-21"
+  },
+  {
+   "name": "Adobe Acrobat Reader",
+   "publisher": "Adobe",
+   "version": "24.2",
+   "size_mb": 880,
+   "installed": "2024-01-08"
+  },
+  {
+   "name": "Java 8 Update 202",
+   "publisher": "Oracle",
+   "version": "8.0.202",
+   "size_mb": 124,
+   "installed": "2023-05-19"
+  },
+  {
+   "name": "VLC media player",
+   "publisher": "VideoLAN",
+   "version": "3.0.21",
+   "size_mb": 147,
+   "installed": "2024-06-30"
+  },
+  {
+   "name": "Notepad++",
+   "publisher": "Notepad++ Team",
+   "version": "8.6",
+   "size_mb": 18,
+   "installed": "2024-04-02"
+  },
+  {
+   "name": "Microsoft Teams",
+   "publisher": "Microsoft",
+   "version": "24.1",
+   "size_mb": 410,
+   "installed": "2024-02-11"
+  },
+  {
+   "name": "Spotify",
+   "publisher": "Spotify AB",
+   "version": "1.2",
+   "size_mb": 320,
+   "installed": "2025-01-19"
+  }
+ ],
+ "startup": [
+  {
+   "name": "Microsoft Teams",
+   "command": "Teams.exe --process-start",
+   "location": "Registry (user)",
+   "enabled": true
+  },
+  {
+   "name": "OneDrive",
+   "command": "OneDrive.exe /background",
+   "location": "Registry (user)",
+   "enabled": true
+  },
+  {
+   "name": "Spotify",
+   "command": "Spotify.exe --minimized",
+   "location": "Registry (user)",
+   "enabled": true
+  },
+  {
+   "name": "Discord",
+   "command": "Update.exe --processStart Discord.exe",
+   "location": "Registry (user)",
+   "enabled": false
+  },
+  {
+   "name": "Realtek Audio",
+   "command": "RtkAudUService64.exe",
+   "location": "Registry (machine)",
+   "enabled": true
+  }
+ ],
+ "processes": [
+  {
+   "name": "chrome.exe",
+   "cpu": 14.0,
+   "mem_mb": 2150
+  },
+  {
+   "name": "Teams.exe",
+   "cpu": 6.0,
+   "mem_mb": 820
+  },
+  {
+   "name": "MsMpEng.exe",
+   "cpu": 3.0,
+   "mem_mb": 310
+  },
+  {
+   "name": "explorer.exe",
+   "cpu": 1.0,
+   "mem_mb": 180
+  },
+  {
+   "name": "nginx.exe",
+   "cpu": 0.0,
+   "mem_mb": 40
+  }
+ ]
+}

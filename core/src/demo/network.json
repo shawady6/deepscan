@@ -1,0 +1,73 @@
+{
+ "demo": true,
+ "hostname": "DESKTOP-LAB07",
+ "active": {
+  "name": "Wi-Fi",
+  "type": "Wi-Fi",
+  "desc": "Intel Wi-Fi 6 AX201",
+  "mac": "A4-C3-F0-00-00-7E",
+  "ipv4": "192.168.1.24",
+  "mask": "255.255.255.0",
+  "gateway": "192.168.1.1",
+  "dns": [
+   "8.8.8.8",
+   "1.1.1.1"
+  ],
+  "ipv6": "fe80::7a1c:0:0:29b4",
+  "dhcp": "Enabled",
+  "speed": "866 Mbps"
+ },
+ "wifi": {
+  "ssid": "Office-5G",
+  "signal": 82,
+  "radio": "802.11ax",
+  "channel": "36",
+  "security": "WPA2-Personal",
+  "rx": "866",
+  "tx": "866"
+ },
+ "adapters": [
+  {
+   "name": "Wi-Fi",
+   "desc": "Intel Wi-Fi 6 AX201",
+   "status": "Up",
+   "speed": "866 Mbps",
+   "virtual": false
+  },
+  {
+   "name": "Ethernet",
+   "desc": "Realtek PCIe 2.5GbE",
+   "status": "Disconnected",
+   "speed": "",
+   "virtual": false
+  },
+  {
+   "name": "vEthernet (Default Switch)",
+   "desc": "Hyper-V Virtual Ethernet",
+   "status": "Up",
+   "speed": "10 Gbps",
+   "virtual": true
+  }
+ ],
+ "ping": [
+  {
+   "label": "Router",
+   "target": "192.168.1.1",
+   "ms": 2,
+   "loss": 0
+  },
+  {
+   "label": "Google DNS",
+   "target": "8.8.8.8",
+   "ms": 19,
+   "loss": 0
+  },
+  {
+   "label": "Cloudflare",
+   "target": "1.1.1.1",
+   "ms": 14,
+   "loss": 0
+  }
+ ],
+ "dns_ms": 38
+}

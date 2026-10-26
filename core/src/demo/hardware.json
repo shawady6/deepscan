@@ -1,0 +1,68 @@
+{
+ "demo": true,
+ "device": {
+  "name": "DESKTOP-LAB07",
+  "maker": "ASUS",
+  "model": "PRIME B660M-K",
+  "serial": "SN-0000000",
+  "domain": "WORKGROUP"
+ },
+ "os": {
+  "name": "Windows 11 Pro",
+  "version": "23H2",
+  "build": "22631",
+  "arch": "64-bit",
+  "install_date": "2024-03-14"
+ },
+ "cpu": {
+  "name": "Intel Core i5-12400",
+  "cores": 6,
+  "threads": 12,
+  "max_ghz": 4.4,
+  "socket": "LGA1700",
+  "l3_mb": 18
+ },
+ "gpu": [
+  {
+   "name": "NVIDIA GeForce GTX 1660",
+   "vram": "6 GB",
+   "driver_date": "2025-02-11",
+   "display": "1920 x 1080 at 60 Hz"
+  }
+ ],
+ "board": {
+  "maker": "ASUSTeK COMPUTER INC.",
+  "model": "PRIME B660M-K",
+  "bios_version": "2103",
+  "bios_date": "2023-08-14"
+ },
+ "tpm": "2.0 present",
+ "secure_boot": "Enabled",
+ "memory": {
+  "total_gb": 16,
+  "slots_total": 4,
+  "modules": [
+   {
+    "slot": "DIMM A1",
+    "size_gb": 8,
+    "type": "DDR4",
+    "speed": 3200,
+    "maker": "Kingston"
+   },
+   {
+    "slot": "DIMM B1",
+    "size_gb": 8,
+    "type": "DDR4",
+    "speed": 3200,
+    "maker": "Kingston"
+   }
+  ]
+ },
+ "sensors": [
+  {
+   "name": "ACPI thermal zone",
+   "value": 41,
+   "unit": "°C"
+  }
+ ]
+}

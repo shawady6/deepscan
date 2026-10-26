@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "DeepScan",
+  "version": "1.0.0",
+  "identifier": "com.deepscan.app",
+  "build": { "frontendDist": "../ui" },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      { "title": "DeepScan", "width": 1280, "height": 820, "minWidth": 980, "minHeight": 600, "backgroundColor": "#0E1318" }
+    ],
+    "security": { "csp": null }
+  },
+  "bundle": { "active": false, "icon": ["icons/icon.png", "icons/icon.ico"] }
+}

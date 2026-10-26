@@ -1,0 +1,69 @@
+{
+ "demo": true,
+ "disks": [
+  {
+   "id": "0",
+   "name": "Samsung 970 EVO Plus 512GB",
+   "type": "NVMe SSD",
+   "size_gb": 477,
+   "health": "ok",
+   "status": "Healthy",
+   "serial": "S4EVNX0N000000",
+   "temp_c": 41,
+   "power_on_hours": 6120,
+   "wear_pct": 6,
+   "read_errors": 0,
+   "write_errors": 0,
+   "volumes": [
+    "C"
+   ]
+  },
+  {
+   "id": "1",
+   "name": "Seagate ST1000DM010",
+   "type": "HDD",
+   "size_gb": 931,
+   "health": "warn",
+   "status": "Warning",
+   "serial": "ZN1000000",
+   "temp_c": 36,
+   "power_on_hours": 31480,
+   "wear_pct": null,
+   "read_errors": 12,
+   "write_errors": 0,
+   "volumes": [
+    "D"
+   ]
+  }
+ ],
+ "volumes": [
+  {
+   "letter": "C",
+   "label": "Windows",
+   "fs": "NTFS",
+   "size_gb": 476.2,
+   "free_gb": 137.1,
+   "disk": "0",
+   "encryption": "on"
+  },
+  {
+   "letter": "D",
+   "label": "Data",
+   "fs": "NTFS",
+   "size_gb": 931.5,
+   "free_gb": 519.4,
+   "disk": "1",
+   "encryption": "off"
+  },
+  {
+   "letter": "F",
+   "label": "USB",
+   "fs": "exFAT",
+   "size_gb": 29.8,
+   "free_gb": 21.0,
+   "disk": null,
+   "encryption": "unknown"
+  }
+ ],
+ "temp_mb": 6200
+}
