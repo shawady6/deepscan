@@ -67,6 +67,20 @@ async fn save_file(app: AppHandle, name: String, content: String, _kind: Option<
     Ok(path.to_string_lossy().to_string())
 }
 
+// ---- Defender
+#[tauri::command]
+async fn defender_status() -> Value {
+    blocking(|| core::defender::status()).await
+}
+#[tauri::command]
+async fn defender_pause(minutes: u32) -> Value {
+    blocking(move || core::defender::pause(minutes)).await
+}
+#[tauri::command]
+async fn defender_resume() -> Value {
+    blocking(|| core::defender::resume()).await
+}
+
 // ---- Updates
 #[tauri::command]
 async fn update_check() -> Value {
@@ -142,13 +156,15 @@ async fn restart_now() -> Value {
 
 fn main() {
     core::update::cleanup();
+    std::thread::spawn(core::defender::reconcile);
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(Live(Mutex::new(core::LiveState::new())))
         .invoke_handler(tauri::generate_handler![
             scan, updates, public_ip, run_speedtest, live, speed_history, app_info, set_settings, save_file,
             repair_state, health_check, bloat_scan, bloat_remove, tweaks_apply, history_undo, fix_script, fix_run,
-            restore_info, restore_create, restore_open, restart_now, update_check, update_install
+            restore_info, restore_create, restore_open, restart_now, update_check, update_install,
+            defender_status, defender_pause, defender_resume
         ])
         .run(tauri::generate_context!())
         .expect("failed to start DeepScan");

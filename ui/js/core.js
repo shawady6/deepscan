@@ -71,7 +71,7 @@ const DS = {
 // Positional arguments of each backend command (Tauri wants a named-argument object).
 const API_ARGS = {
   scan: ['step'], set_settings: ['patch'], save_file: ['name', 'content', 'kind'],
-  update_install: ['assetUrl', 'shaUrl'], health_check: ['id'], bloat_remove: ['ids'], tweaks_apply: ['ids'], history_undo: ['id'], fix_script: ['id'], fix_run: ['id'],
+  update_install: ['assetUrl', 'shaUrl'], defender_pause: ['minutes'], health_check: ['id'], bloat_remove: ['ids'], tweaks_apply: ['ids'], history_undo: ['id'], fix_script: ['id'], fix_run: ['id'],
 };
 async function api(name, ...args) {
   const T = window.__TAURI__;

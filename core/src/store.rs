@@ -97,3 +97,12 @@ pub fn mark_undone(id: &str) {
     }
     write("repair_history.json", &Value::Array(all));
 }
+
+// ------------------------------------------------------- defender pause state
+pub fn defender_pause() -> Value {
+    read("defender_pause.json", Value::Null)
+}
+
+pub fn set_defender_pause(v: Value) {
+    write("defender_pause.json", &v);
+}

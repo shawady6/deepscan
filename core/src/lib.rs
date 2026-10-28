@@ -1,5 +1,6 @@
 //! DeepScan core: collectors, speed test and settings. No GUI code here, so it builds and tests anywhere.
 pub mod collect;
+pub mod defender;
 pub mod repair;
 mod demo;
 pub mod speed;
@@ -114,6 +115,22 @@ mod tests {
         assert_eq!(r["asset_url"], "https://github.com/a/b/DeepScan.exe");
         assert_eq!(parse_release(&rel, "1.1.0")["available"], false);
         assert!(install("https://evil.example/DeepScan.exe", Some("https://evil.example/x")).is_err());
+    }
+
+    #[test]
+    fn defender_demo_flow() {
+        use crate::defender::*;
+        assert_eq!(status()["realtime"], true);
+        assert_eq!(pause(7)["ok"], false); // not an allowed duration
+        assert_eq!(pause(30)["ok"], true);
+        let s = status();
+        assert_eq!(s["realtime"], false);
+        assert!(s["remaining_min"].as_i64().unwrap() >= 29);
+        assert_eq!(resume()["ok"], true);
+        assert_eq!(status()["realtime"], true);
+        assert_eq!(pause(0)["ok"], true);
+        assert_eq!(status()["indefinite"], true);
+        resume();
     }
 
     #[test]

@@ -228,6 +228,7 @@ VIEWS.security = {
     const alert = worst ? `<div class="alert"><div class="grow"><b>Fix first: ${esc(worst.name)}</b><span>${esc(worst.detail)}. ${esc(worst.advice)}</span></div></div>` : '';
     const groups = ['Protection', 'Accounts and access', 'Network and updates'].map(g => `<div class="card grow"><h2>${g}</h2>${s.checks.filter(x => x.group === g).map(x => `<div class="item">${statusBadge(x.status)}<div class="grow"><span class="title">${esc(x.name)}</span><span class="sub">${esc(x.detail)}</span>${x.advice && x.status !== 'ok' ? `<span class="sub" style="color:var(--text)">How to fix: ${esc(x.advice)}</span>` : ''}</div></div>`).join('')}</div>`).join('');
     const ports = `<div class="card"><h2>Listening ports</h2><div class="tw"><table class="t" style="min-width:420px"><thead><tr><th>Port</th><th>Process</th><th>Reachable from</th><th class="num">Status</th></tr></thead><tbody>${s.ports.map(p => `<tr><td class="mono">${p.port}</td><td>${esc(p.process)}</td><td>${esc(p.scope)}</td><td class="num">${p.flag === 'review' ? badge('warn', 'Review') : badge('ok', 'OK')}</td></tr>`).join('')}</tbody></table></div></div>`;
-    return head + top + alert + `<div class="row">${groups}</div>` + ports;
+    return head + top + alert + (typeof defCard === 'function' ? defCard() : '') + `<div class="row">${groups}</div>` + ports;
   },
+  after() { if (typeof defInit === 'function') defInit(); },
 };
