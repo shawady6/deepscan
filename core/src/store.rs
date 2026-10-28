@@ -28,7 +28,7 @@ fn write(name: &str, data: &Value) {
 }
 
 pub fn get_settings() -> Value {
-    let mut s = json!({"theme": "dark", "hide_admin_notice": false});
+    let mut s = json!({"theme": "dark", "hide_admin_notice": false, "auto_update_check": true, "skip_version": ""});
     if let Value::Object(saved) = read("settings.json", json!({})) {
         for (k, v) in saved {
             s[k] = v;
@@ -41,7 +41,7 @@ pub fn set_settings(patch: &Value) -> Value {
     let mut s = get_settings();
     if let Some(p) = patch.as_object() {
         for (k, v) in p {
-            if k == "theme" || k == "hide_admin_notice" {
+            if matches!(k.as_str(), "theme" | "hide_admin_notice" | "auto_update_check" | "skip_version") {
                 s[k.as_str()] = v.clone();
             }
         }

@@ -71,7 +71,7 @@ const DS = {
 // Positional arguments of each backend command (Tauri wants a named-argument object).
 const API_ARGS = {
   scan: ['step'], set_settings: ['patch'], save_file: ['name', 'content', 'kind'],
-  health_check: ['id'], bloat_remove: ['ids'], tweaks_apply: ['ids'], history_undo: ['id'], fix_script: ['id'], fix_run: ['id'],
+  update_install: ['assetUrl', 'shaUrl'], health_check: ['id'], bloat_remove: ['ids'], tweaks_apply: ['ids'], history_undo: ['id'], fix_script: ['id'], fix_run: ['id'],
 };
 async function api(name, ...args) {
   const T = window.__TAURI__;
@@ -263,6 +263,7 @@ async function start() {
   $('#deviceChip').innerHTML = `<b id="chipName">This device</b><span id="chipSub">${dev || 'Ready to scan'}</span>`;
   try { DS.speed.history = await api('speed_history'); } catch (e) { /* none yet */ }
   pollLive(); setInterval(pollLive, 2000);
+  if (typeof updInit === 'function') updInit();
   route();
   if (!Object.keys(DS.data).length) { await sleep(250); runScan(); }
 }

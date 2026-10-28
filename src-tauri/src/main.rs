@@ -67,6 +67,29 @@ async fn save_file(app: AppHandle, name: String, content: String, _kind: Option<
     Ok(path.to_string_lossy().to_string())
 }
 
+// ---- Updates
+#[tauri::command]
+async fn update_check() -> Value {
+    blocking(|| core::update::check()).await
+}
+
+/// Download and verify the new version, swap it in, start it and close this instance.
+#[tauri::command]
+async fn update_install(app: AppHandle, asset_url: String, sha_url: Option<String>) -> Value {
+    let r = spawn_blocking(move || core::update::install(&asset_url, sha_url.as_deref())).await;
+    match r {
+        Ok(Ok(exe)) => match std::process::Command::new(exe).spawn() {
+            Ok(_) => {
+                app.exit(0);
+                json!({"ok": true})
+            }
+            Err(e) => json!({"ok": false, "error": format!("Updated, but could not start the new version: {e}. Start DeepScan again manually.")}),
+        },
+        Ok(Err(e)) => json!({"ok": false, "error": e}),
+        Err(e) => json!({"ok": false, "error": e.to_string()}),
+    }
+}
+
 // ---- Repair tab
 #[tauri::command]
 fn repair_state() -> Value {
@@ -118,13 +141,14 @@ async fn restart_now() -> Value {
 }
 
 fn main() {
+    core::update::cleanup();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(Live(Mutex::new(core::LiveState::new())))
         .invoke_handler(tauri::generate_handler![
             scan, updates, public_ip, run_speedtest, live, speed_history, app_info, set_settings, save_file,
             repair_state, health_check, bloat_scan, bloat_remove, tweaks_apply, history_undo, fix_script, fix_run,
-            restore_info, restore_create, restore_open, restart_now
+            restore_info, restore_create, restore_open, restart_now, update_check, update_install
         ])
         .run(tauri::generate_context!())
         .expect("failed to start DeepScan");

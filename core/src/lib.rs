@@ -4,6 +4,7 @@ pub mod repair;
 mod demo;
 pub mod speed;
 pub mod store;
+pub mod update;
 pub mod util;
 
 use base64::Engine;
@@ -42,7 +43,7 @@ pub fn run_speedtest() -> Value {
 }
 
 pub fn app_info() -> Value {
-    json!({"windows": util::IS_WIN, "admin": util::is_admin(), "settings": store::get_settings()})
+    json!({"version": update::VERSION, "windows": util::IS_WIN, "admin": util::is_admin(), "settings": store::get_settings()})
 }
 
 /// Write text or a `data:` URL (PNG) to `path`.
@@ -95,6 +96,24 @@ mod tests {
         for c in CHECK_IDS { let r = health_check(c.0); if let Some(f) = r["fix"].as_str() { assert!(f == "restart" || FIXES.iter().any(|x| x.id == f), "{f}"); } }
         assert_eq!(repair_state()["tweaks"].as_array().unwrap().len(), TWEAKS.len());
         assert!(bloat_scan()["items"].is_array());
+    }
+
+    #[test]
+    fn update_versions() {
+        use crate::update::*;
+        assert_eq!(parse_ver("v1.2.3"), Some((1, 2, 3)));
+        assert_eq!(parse_ver("1.10"), Some((1, 10, 0)));
+        assert_eq!(parse_ver("v2.0.0-beta.1"), Some((2, 0, 0)));
+        assert_eq!(parse_ver("nightly"), None);
+        assert!(parse_ver("1.10.0") > parse_ver("1.9.9")); // numeric, not text, comparison
+        let rel = json!({"tag_name": "v1.1.0", "body": "Notes", "html_url": "https://x", "assets": [
+            {"name": "DeepScan.exe", "browser_download_url": "https://github.com/a/b/DeepScan.exe", "size": 5},
+            {"name": "DeepScan.exe.sha256", "browser_download_url": "https://github.com/a/b/DeepScan.exe.sha256"}]});
+        let r = parse_release(&rel, "1.0.0");
+        assert_eq!(r["available"], true);
+        assert_eq!(r["asset_url"], "https://github.com/a/b/DeepScan.exe");
+        assert_eq!(parse_release(&rel, "1.1.0")["available"], false);
+        assert!(install("https://evil.example/DeepScan.exe", Some("https://evil.example/x")).is_err());
     }
 
     #[test]

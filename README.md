@@ -17,3 +17,9 @@
 - معلومات الـ Wi-Fi بتتقرأ صح على ويندوز إنجليزي فقط حاليًا.
 - حرارة المعالج مش دقيقة (محتاجة LibreHardwareMonitor).
 - الإعدادات وتاريخ السرعة في `%APPDATA%\DeepScan`.
+
+## التحديثات من داخل التطبيق
+- التطبيق بيفحص آخر Release على GitHub (`shawady6/deepscan`) عند التشغيل وبيظهر شريط "Update now"، وفي زرار "Check for updates" في الشريط الجانبي وتبويب Reports.
+- لازم الريبو يكون **Public** عشان الفحص يشتغل بدون توكن.
+- لنشر نسخة جديدة: غيّر `version` في `core/Cargo.toml` و`src-tauri/Cargo.toml` و`src-tauri/tauri.conf.json`، ثم `git tag v1.1.0 && git push origin v1.1.0`. الـ workflow "Release" بيبني ويرفع `DeepScan.exe` + `DeepScan.exe.sha256`.
+- التطبيق بيرفض التحديث لو الملف مش من نفس الريبو أو الـ checksum مش مطابق.
