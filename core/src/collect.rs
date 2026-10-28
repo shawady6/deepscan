@@ -619,13 +619,14 @@ pub struct LiveState {
     sys: System,
     nets: Networks,
     prev: Option<(Instant, u64, u64)>,
+    ticks: u32,
 }
 
 impl LiveState {
     pub fn new() -> Self {
         let mut sys = System::new();
         sys.refresh_cpu_usage();
-        Self { sys, nets: Networks::new_with_refreshed_list(), prev: None }
+        Self { sys, nets: Networks::new_with_refreshed_list(), prev: None, ticks: 0 }
     }
 }
 
@@ -636,7 +637,9 @@ impl Default for LiveState {
 pub fn live(st: &mut LiveState) -> Value {
     st.sys.refresh_cpu_usage();
     st.sys.refresh_memory();
-    st.nets.refresh(true);
+    // Re-list interfaces only now and then (adapters rarely change); other ticks just read the counters.
+    st.ticks += 1;
+    st.nets.refresh(st.ticks % 30 == 0);
     let (rx, tx) = st.nets.iter().fold((0u64, 0u64), |a, (_, n)| (a.0 + n.total_received(), a.1 + n.total_transmitted()));
     let now = Instant::now();
     let (mut down, mut up) = (0.0, 0.0);

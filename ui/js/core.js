@@ -175,6 +175,7 @@ function applyLive() {
   if (mb) { mb.style.width = L.mem + '%'; mb.parentElement.className = 'bar ' + pctKind(L.mem, 80, 92); }
 }
 async function pollLive() {
+  if (document.hidden) return; // minimised or in the background: do no work
   try { DS.live = await api('live'); applyLive(); } catch (e) { /* UI keeps last value */ }
 }
 
@@ -262,7 +263,8 @@ async function start() {
   const dev = DS.info.windows ? '' : 'Demo data';
   $('#deviceChip').innerHTML = `<b id="chipName">This device</b><span id="chipSub">${dev || 'Ready to scan'}</span>`;
   try { DS.speed.history = await api('speed_history'); } catch (e) { /* none yet */ }
-  pollLive(); setInterval(pollLive, 2000);
+  pollLive(); setInterval(pollLive, 3000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) pollLive(); });
   if (typeof updInit === 'function') updInit();
   route();
   if (!Object.keys(DS.data).length) { await sleep(250); runScan(); }

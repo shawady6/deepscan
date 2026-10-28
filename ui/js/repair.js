@@ -51,21 +51,22 @@ async function rpRunCheck(id) {
   rpPaint();
 }
 async function rpLoadBloat() {
-  RP.bloat = null; RP.bloatErr = ''; rpPaint();
+  RP.bloat = null; RP.bloatErr = ''; RP.bloatBusy = true; rpPaint();
   const r = await rpBackend('bloat_scan');
+  RP.bloatBusy = false;
   if (r.error) RP.bloatErr = r.error; else RP.bloat = r.items || [];
   RP.selApps = new Set();
   rpPaint();
 }
+// Light checks run one after another (never in parallel); heavy ones only when asked.
+async function rpRunLight() { for (const c of (RP.state.checks || []).filter(x => !x.slow)) await rpRunCheck(c.id); }
 async function rpInit(force) {
   if (RP.started && !force) return;
   RP.started = true;
   await rpLoadState(); rpPaint();
   rpBackend('restore_info').then(r => { RP.restore = r; rpPaint(); });
-  rpLoadBloat();
-  const fast = (RP.state.checks || []).filter(c => !c.slow);
   RP.checks = {};
-  await Promise.all(fast.map(c => rpRunCheck(c.id)));
+  await rpRunLight();
 }
 function rpPaint() {
   if (DS.route !== 'repair') return;
@@ -106,8 +107,8 @@ function rpHealth() {
     let badgeHtml, detail, act = '';
     if (!r) {
       badgeHtml = c.slow ? badge('info', 'Not run', true) : badge('info', 'Checking', true);
-      detail = c.slow ? 'Takes several minutes. Run it when you have time.' : 'Checking...';
-      if (c.slow) act = `<button class="btn small" data-action="rpCheck" data-id="${c.id}" type="button">Run scan</button>`;
+      detail = c.slow ? 'Not run yet. It uses some CPU for a while, so it only runs when you ask.' : 'Checking...';
+      if (c.slow) act = `<button class="btn small" data-action="rpCheck" data-id="${c.id}" type="button">Run check</button>`;
     } else if (r.status === 'running') {
       badgeHtml = `<span class="badge info fixed"><span class="spinner"></span></span>`; detail = 'Checking...';
     } else {
@@ -133,7 +134,8 @@ function rpSafety() {
 function rpBloat() {
   let body;
   if (RP.bloatErr) body = `<p class="hint">${esc(RP.bloatErr)}</p><button class="btn small" data-action="rpRescanApps" type="button">Try again</button>`;
-  else if (!RP.bloat) body = `<p class="hint"><span class="spinner"></span>&nbsp; Looking for removable apps...</p>`;
+  else if (RP.bloatBusy) body = `<p class="hint" role="status"><span class="spinner"></span>&nbsp; Looking for removable apps...</p>`;
+  else if (!RP.bloat) body = `<p class="hint">Listing installed apps takes a few seconds of CPU, so it runs when you ask.</p><button class="btn primary" data-action="rpRescanApps" type="button">Scan installed apps</button>`;
   else if (!RP.bloat.length) body = `<p class="hint">No removable preinstalled apps found. Nothing to clean.</p>`;
   else {
     const rows = RP.bloat.map(a => `<label class="rp-opt"><input type="checkbox" data-change="rpApp" data-id="${esc(a.id)}" ${RP.selApps.has(a.id) ? 'checked' : ''}>
@@ -170,7 +172,7 @@ function rpHistory() {
 }
 
 /* ---------- actions ---------- */
-ACTIONS.rpRecheck = async () => { RP.checks = {}; rpPaint(); await Promise.all((RP.state.checks || []).filter(c => !c.slow).map(c => rpRunCheck(c.id))); };
+ACTIONS.rpRecheck = async () => { RP.checks = {}; rpPaint(); await rpRunLight(); };
 ACTIONS.rpCheck = el => rpRunCheck(el.dataset.id);
 ACTIONS.rpAuto = el => { RP.autoRestore = el.checked; };
 ACTIONS.rpApp = el => { el.checked ? RP.selApps.add(el.dataset.id) : RP.selApps.delete(el.dataset.id); rpPaint(); };

@@ -11,8 +11,11 @@ function defPaint() { if (DS.route === 'security' && DS.data.security) render('s
 function defInit() {
   if (DF.timer) clearInterval(DF.timer);
   defRefresh();
-  // keep the countdown honest while the tab is open
-  DF.timer = setInterval(() => { if (DS.route !== 'security') { clearInterval(DF.timer); DF.timer = null; } else if (!DF.busy) defRefresh(); }, 30000);
+  // Each status read starts PowerShell, so only poll while protection is paused (to follow the countdown), and slowly.
+  DF.timer = setInterval(() => {
+    if (DS.route !== 'security') { clearInterval(DF.timer); DF.timer = null; return; }
+    if (!document.hidden && !DF.busy && DF.st && DF.st.available && !DF.st.realtime) defRefresh();
+  }, 60000);
 }
 
 function defCard() {

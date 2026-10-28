@@ -525,11 +525,11 @@ fn check(id: &str, name: &str, status: &str, detail: &str, advice: &str, fix: Op
 pub const CHECK_IDS: &[(&str, &str, bool)] = &[
     ("reboot", "Pending restart", false),
     ("wu", "Windows Update service", false),
-    ("appx", "Microsoft Store apps", false),
-    ("wmi", "WMI repository", false),
-    ("dism", "Windows image (component store)", false),
+    ("appx", "Microsoft Store apps", true),
+    ("wmi", "WMI repository", true),
+    ("dism", "Windows image (component store)", true),
     ("disk", "Disk health", false),
-    ("sfc", "System file integrity", true), // slow: only when asked
+    ("sfc", "System file integrity", true), // true = heavy: runs only when the user asks
 ];
 
 pub fn health_list() -> Value {
