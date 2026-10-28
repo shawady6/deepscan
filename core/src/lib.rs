@@ -62,6 +62,8 @@ pub fn write_file(path: &str, content: &str) -> Result<(), String> {
 mod tests {
     use super::*;
 
+    // Uses demo data. On Windows these functions run the real system checks (DISM, sfc, Defender), which a test must never do.
+    #[cfg(not(windows))]
     #[test]
     fn scan_steps_return_data() {
         for s in ["hardware", "storage", "network", "security", "software"] {
@@ -87,6 +89,8 @@ mod tests {
         assert_eq!(super::collect::__ms("64 bytes from x: icmp_seq=1 ttl=57 time=0.52 ms"), Some(0.52));
     }
 
+    // Uses demo data. On Windows these functions run the real system checks (DISM, sfc, Defender), which a test must never do.
+    #[cfg(not(windows))]
     #[test]
     fn repair_catalog_is_consistent() {
         use crate::repair::*;
@@ -117,6 +121,8 @@ mod tests {
         assert!(install("https://evil.example/DeepScan.exe", Some("https://evil.example/x")).is_err());
     }
 
+    // Uses demo data. On Windows these functions run the real system checks (DISM, sfc, Defender), which a test must never do.
+    #[cfg(not(windows))]
     #[test]
     fn defender_demo_flow() {
         use crate::defender::*;
