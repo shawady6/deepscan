@@ -5,18 +5,16 @@ const DEF_CHOICES = [[15, '15 minutes'], [30, '30 minutes'], [60, '1 hour'], [12
 
 async function defRefresh() {
   try { DF.st = await api('defender_status'); } catch (e) { DF.st = { available: false, error: String(e) }; }
+  // No periodic polling at all (every read starts PowerShell). When a timed pause is running, read once more right after it ends.
+  if (DF.timer) { clearTimeout(DF.timer); DF.timer = null; }
+  const s = DF.st;
+  if (s && s.available && !s.realtime && !s.indefinite && s.remaining_min != null) {
+    DF.timer = setTimeout(() => { DF.timer = null; defRefresh(); }, s.remaining_min * 60000 + 8000);
+  }
   defPaint();
 }
 function defPaint() { if (DS.route === 'security' && DS.data.security) render('security', false); }
-function defInit() {
-  if (DF.timer) clearInterval(DF.timer);
-  defRefresh();
-  // Each status read starts PowerShell, so only poll while protection is paused (to follow the countdown), and slowly.
-  DF.timer = setInterval(() => {
-    if (DS.route !== 'security') { clearInterval(DF.timer); DF.timer = null; return; }
-    if (!document.hidden && !DF.busy && DF.st && DF.st.available && !DF.st.realtime) defRefresh();
-  }, 60000);
-}
+function defInit() { defRefresh(); } // once per visit to the Security tab
 
 function defCard() {
   const s = DF.st;
