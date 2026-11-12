@@ -5,6 +5,7 @@ pub mod repair;
 mod demo;
 pub mod speed;
 pub mod store;
+pub mod toolkit;
 pub mod update;
 pub mod util;
 
@@ -137,6 +138,22 @@ mod tests {
         assert_eq!(pause(0)["ok"], true);
         assert_eq!(status()["indefinite"], true);
         resume();
+    }
+
+    #[test]
+    fn toolkit_catalog_is_consistent() {
+        use crate::toolkit::*;
+        let mut ids = std::collections::HashSet::new();
+        for t in TOOLS {
+            assert!(ids.insert(t.id), "duplicate id {}", t.id);
+            assert!(GROUPS.iter().any(|g| g.0 == t.group), "bad group for {}", t.id);
+            assert!(["low", "medium", "high"].contains(&t.risk), "bad risk for {}", t.id);
+            assert!(!script(t.id)["script"].as_str().unwrap().trim().is_empty());
+            assert!(t.timeout > 0);
+        }
+        assert!(TOOLS.len() >= 40);
+        assert_eq!(list()["tools"].as_array().unwrap().len(), TOOLS.len());
+        assert_eq!(script("nope")["ok"], false);
     }
 
     #[test]

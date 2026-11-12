@@ -206,3 +206,11 @@ legend{padding:0;margin-bottom:6px;font-size:13px;font-weight:600}
 .btn.danger{background:#C93C3C;color:#fff;border-color:transparent;font-weight:600}
 .btn.danger:hover{background:#B33030}
 .modal .body p+p,.modal .body ul+p,.modal .body p+ul{margin-top:12px}
+
+.rp-group{border-top:1px solid var(--line);padding:12px 0}
+.rp-group:first-of-type{border-top:0}
+.rp-group summary{cursor:pointer;font-weight:600;padding:4px 0;margin-bottom:8px;list-style:none}
+.rp-group summary::-webkit-details-marker{display:none}
+.rp-group summary::before{content:"\25B8";display:inline-block;width:18px;color:var(--muted)}
+.rp-group[open] summary::before{content:"\25BE"}
+.rp-group summary .hint{margin-left:6px;font-weight:400}

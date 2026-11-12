@@ -31,7 +31,7 @@ async function updCheck(manual) {
 }
 function updInit() {
   updPaint();
-  if (DS.info && DS.info.windows && updSettings().auto_update_check !== false) setTimeout(() => updCheck(false), 4000);
+  if (DS.info && DS.info.windows && updSettings().auto_update_check === true) setTimeout(() => updCheck(false), 4000);
 }
 
 ACTIONS.updCheck = () => updCheck(true);
@@ -70,6 +70,6 @@ ACTIONS.updAuto = async el => {
     const status = !i ? '' : !i.ok ? esc(i.error || '') : i.available ? `Version ${esc(i.latest)} is available.` : 'You have the latest version.';
     return base.call(this) + `<div class="card"><div class="card-head"><div class="stack" style="gap:2px"><h2 style="margin:0">DeepScan ${esc(updVersion())}</h2><span class="card-note">${status}</span></div>
       <button class="btn" data-action="updCheck" type="button" ${UP.checking ? 'disabled' : ''}>${UP.checking ? 'Checking...' : 'Check for updates'}</button></div>
-      <label class="opt" style="margin-top:8px"><input type="checkbox" data-change="updAuto" ${s.auto_update_check !== false ? 'checked' : ''}>Check for updates when DeepScan starts</label></div>`;
+      <label class="opt" style="margin-top:8px"><input type="checkbox" data-change="updAuto" ${s.auto_update_check === true ? 'checked' : ''}>Check for updates when DeepScan starts</label></div>`;
   };
 })();

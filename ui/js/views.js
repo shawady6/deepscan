@@ -1,9 +1,14 @@
 /* DeepScan screens. Each view: { title, render() -> html, after(el)? } */
 
+// Before a scan there is nothing to show. Nothing scans by itself, so offer the button instead of a loading placeholder.
+function waiting(h) {
+  if (DS.scan.running) return skeleton(h);
+  return `<div class="card empty"><h2>Not scanned yet</h2><p class="hint">Nothing runs by itself. Press the button to scan this PC.</p><button class="btn primary" data-action="scan" type="button">Run scan</button></div>`;
+}
 function section(id, build) {
   if (DS.data[id]) return build(DS.data[id]);
   if (DS.errors[id]) return errorCard(id, DS.errors[id]);
-  return skeleton(140);
+  return waiting(140);
 }
 function updateChip() {
   const hw = DS.data.hardware; if (!hw || !hw.device) return;
@@ -88,7 +93,7 @@ VIEWS.hardware = {
   render() {
     const hw = DS.data.hardware;
     const head = pageHead('Hardware', hw ? esc(hw.cpu.name) : 'Reading components...');
-    if (!hw) return head + (DS.errors.hardware ? errorCard('hardware', DS.errors.hardware) : skeleton(300));
+    if (!hw) return head + (DS.errors.hardware ? errorCard('hardware', DS.errors.hardware) : waiting(300));
     const cpu = `<div class="card grow"><h2>Processor</h2>${kv('Model', hw.cpu.name)}${kv('Cores / threads', `${hw.cpu.cores} / ${hw.cpu.threads}`)}${kv('Max clock', hw.cpu.max_ghz ? hw.cpu.max_ghz + ' GHz' : '')}${kv('Socket', hw.cpu.socket)}${kv('L3 cache', hw.cpu.l3_mb ? hw.cpu.l3_mb + ' MB' : '')}</div>`;
     const gpus = hw.gpu.map(g => `<div class="card grow"><h2>Graphics</h2>${kv('Adapter', g.name)}${kv('Video memory', g.vram)}${kv('Driver date', g.driver_date)}${kv('Display', g.display)}</div>`).join('');
     const board = `<div class="card grow"><h2>Motherboard and firmware</h2>${kv('Board', [hw.board.maker, hw.board.model].filter(Boolean).join(' '))}${kv('BIOS version', hw.board.bios_version)}${kv('BIOS date', hw.board.bios_date)}${kv('TPM', hw.tpm)}${kv('Secure Boot', hw.secure_boot)}</div>`;
@@ -111,7 +116,7 @@ VIEWS.storage = {
     const need = st ? st.disks.filter(d => d.health !== 'ok').length : 0;
     const head = pageHead('Storage health', st ? `${st.disks.length} drive${st.disks.length === 1 ? '' : 's'} checked${need ? ` · ${need} need${need > 1 ? '' : 's'} attention` : ' · all healthy'}` : 'Reading drives...',
       `<button class="btn" data-rescan="storage" type="button">Re-check</button>`);
-    if (!st) return head + (DS.errors.storage ? errorCard('storage', DS.errors.storage) : skeleton(300));
+    if (!st) return head + (DS.errors.storage ? errorCard('storage', DS.errors.storage) : waiting(300));
     const cards = st.disks.map(d => {
       const vols = st.volumes.filter(v => d.volumes.includes(v.letter)).map(v => { const used = v.size_gb - v.free_gb, p = Math.round(used / v.size_gb * 100); return `<div class="stack" style="gap:8px"><div class="kv" style="border:0;padding:0"><span>Space used (${esc(v.letter)}:)</span><span class="mono">${Math.round(used)} of ${Math.round(v.size_gb)} GB</span></div>${bar(p, pctKind(p, 75, 90), true)}</div>`; }).join('');
       const life = d.wear_pct != null ? `<div class="stack" style="gap:8px"><div class="kv" style="border:0;padding:0"><span>Life remaining</span><span class="mono">${100 - d.wear_pct}%</span></div>${bar(100 - d.wear_pct, 100 - d.wear_pct < 20 ? 'bad' : 100 - d.wear_pct < 40 ? 'warn' : '', true)}</div>` : '';
@@ -145,7 +150,7 @@ VIEWS.software = {
   render() {
     const sw = DS.data.software;
     const head = pageHead('Software', sw ? `${sw.programs.length} programs · ${sw.startup.filter(s => s.enabled).length} start with Windows` : 'Reading installed software...', `<button class="btn" data-rescan="software" type="button">Re-check</button>`);
-    if (!sw) return head + (DS.errors.software ? errorCard('software', DS.errors.software) : skeleton(300));
+    if (!sw) return head + (DS.errors.software ? errorCard('software', DS.errors.software) : waiting(300));
     const kp = `<div class="kpis"><div class="card kpi"><span class="label">Installed programs</span><span class="value">${sw.programs.length}</span></div><div class="card kpi"><span class="label">Start with Windows</span><span class="value">${sw.startup.filter(s => s.enabled).length}</span><span class="sub">${sw.startup.filter(s => !s.enabled).length} more are turned off</span></div><div class="card kpi"><span class="label">Running processes</span><span class="value">${sw.processes.length}<small> top</small></span></div></div>`;
     const prog = `<div class="card"><div class="card-head" style="flex-wrap:wrap"><h2>Installed programs</h2><input class="search" type="search" placeholder="Search programs" aria-label="Search programs" value="${esc(DS.sw.q)}" data-input="swSearch"></div>
       <div class="tw"><table class="t" style="min-width:680px"><thead><tr>${sortTh('name', 'Name')}${sortTh('publisher', 'Publisher')}${sortTh('version', 'Version')}${sortTh('size_mb', 'Size', 'num')}${sortTh('installed', 'Installed')}</tr></thead><tbody id="progBody">${progRows()}</tbody></table></div><p class="card-note" id="progCount" style="margin-top:12px"></p></div>`;
@@ -187,7 +192,7 @@ VIEWS.network = {
     const n = DS.data.network;
     const head = pageHead('Network', n ? (n.active ? `Connected through ${esc(n.active.type)}` : 'No active connection') : 'Reading network...',
       `<button class="btn" data-action="copyNet" type="button">Copy network details</button><button class="btn primary" data-action="speedtest" type="button" ${DS.speed.running ? 'disabled' : ''}>${DS.speed.running ? '<span class="spinner"></span> Testing...' : 'Run speed test'}</button>`);
-    if (!n) return head + (DS.errors.network ? errorCard('network', DS.errors.network) : skeleton(300));
+    if (!n) return head + (DS.errors.network ? errorCard('network', DS.errors.network) : waiting(300));
     const a = n.active, w = n.wifi;
     const conn = a ? `<div class="card grow"><div class="card-head"><h2>Active connection</h2>${badge('ok', 'Connected')}</div>${kv('Type', a.type)}${w ? kv('Network name (SSID)', w.ssid) : ''}${w && w.signal != null ? kv('Signal', w.signal + '%') : ''}${w ? kv('Radio and channel', [w.radio, w.channel && 'channel ' + w.channel].filter(Boolean).join(' · ')) : ''}${kv('Link speed', a.speed)}${w ? kv('Security', w.security) : ''}${kv('Adapter', a.desc)}${kv('MAC address', a.mac)}</div>` : `<div class="card grow"><h2>Active connection</h2><p class="hint">This PC is not connected to a network.</p></div>`;
     const pub = DS.publicIp ? `<span class="mono">${esc(DS.publicIp)}</span>` : `<button class="btn small" data-action="publicIp" type="button">Show</button>`;
@@ -219,7 +224,7 @@ VIEWS.security = {
   render() {
     const s = DS.data.security;
     const head = pageHead('Security', s ? `${s.checks.length} checks` : 'Running checks...', `<button class="btn" data-rescan="security" type="button">Re-run checks</button>`);
-    if (!s) return head + (DS.errors.security ? errorCard('security', DS.errors.security) : skeleton(300));
+    if (!s) return head + (DS.errors.security ? errorCard('security', DS.errors.security) : waiting(300));
     const c = k => s.checks.filter(x => x.status === k).length;
     const score = s.score;
     const top = `<div class="row"><div class="card hero grow" style="flex:1 1 340px">${ring(score, 140, 12, scoreColor(score))}<div class="stack" style="gap:6px"><span class="card-note">Security score</span><h2>${healthWord(score)}</h2><p class="hint">${c('bad')} critical, ${c('warn')} warnings, ${c('unknown')} unknown.</p></div></div>

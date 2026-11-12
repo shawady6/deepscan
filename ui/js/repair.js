@@ -1,7 +1,7 @@
 /* Repair tab: Windows health, bloatware, slim-down tweaks, fix scripts, restore point and undo history. */
 DS.repair = {
   started: false, state: null, checks: {}, restore: null, bloat: null, bloatErr: '',
-  selApps: new Set(), selTweaks: new Set(), preset: 'balanced', autoRestore: true, busy: '', output: null,
+  tk: null, tkOpen: new Set(), selApps: new Set(), selTweaks: new Set(), preset: 'balanced', autoRestore: true, busy: '', output: null,
 };
 const RP = DS.repair;
 const RISK = { low: ['ok', 'Low risk'], medium: ['warn', 'Medium risk'], high: ['bad', 'High risk'] };
@@ -60,13 +60,11 @@ async function rpLoadBloat() {
 }
 // Light checks run one after another (never in parallel); heavy ones only when asked.
 async function rpRunLight() { for (const c of (RP.state.checks || []).filter(x => !x.slow)) await rpRunCheck(c.id); }
+// Opening the tab only loads the static lists. Nothing is checked until the user clicks.
 async function rpInit(force) {
   if (RP.started && !force) return;
   RP.started = true;
-  await rpLoadState(); rpPaint();
-  rpBackend('restore_info').then(r => { RP.restore = r; rpPaint(); });
-  RP.checks = {};
-  await rpRunLight();
+  await rpLoadState(); RP.tk = await rpBackend('toolkit_list'); rpPaint();
 }
 function rpPaint() {
   if (DS.route !== 'repair') return;
@@ -97,7 +95,7 @@ VIEWS.repair = {
       `<button class="btn" data-action="rpRestorePoint" type="button" ${RP.busy ? 'disabled' : ''}>Create restore point</button>`);
     if (!st) return head + skeleton(320);
     const busy = RP.busy ? `<div class="notice" role="status"><span><span class="spinner"></span>&nbsp; ${esc(RP.busy)}</span></div>` : '';
-    return head + busy + rpHealth() + `<div class="row">${rpSafety()}${rpBloat()}</div>` + rpSlim() + rpFixes() + rpHistory();
+    return head + busy + rpHealth() + `<div class="row">${rpSafety()}${rpBloat()}</div>` + rpSlim() + rpFixes() + rpToolkit() + rpHistory();
   },
 };
 
@@ -106,9 +104,9 @@ function rpHealth() {
     const r = RP.checks[c.id];
     let badgeHtml, detail, act = '';
     if (!r) {
-      badgeHtml = c.slow ? badge('info', 'Not run', true) : badge('info', 'Checking', true);
-      detail = c.slow ? 'Not run yet. It uses some CPU for a while, so it only runs when you ask.' : 'Checking...';
-      if (c.slow) act = `<button class="btn small" data-action="rpCheck" data-id="${c.id}" type="button">Run check</button>`;
+      badgeHtml = badge('info', 'Not run', true);
+      detail = c.slow ? 'Not run yet. It uses some CPU for a while, so it only runs when you ask.' : 'Not run yet.';
+      act = `<button class="btn small" data-action="rpCheck" data-id="${c.id}" type="button" ${RP.busy ? 'disabled' : ''}>Run check</button>`;
     } else if (r.status === 'running') {
       badgeHtml = `<span class="badge info fixed"><span class="spinner"></span></span>`; detail = 'Checking...';
     } else {
@@ -120,14 +118,14 @@ function rpHealth() {
     }
     return `<div class="item">${badgeHtml}<div class="grow"><span class="title">${esc(c.name)}</span><span class="sub">${esc(detail)}</span></div>${act}</div>`;
   }).join('');
-  return `<div class="card"><div class="card-head"><h2>Windows health</h2><button class="btn small" data-action="rpRecheck" type="button">Check again</button></div>${rows}</div>`;
+  return `<div class="card"><div class="card-head"><h2>Windows health</h2><button class="btn small" data-action="rpRecheck" type="button">Run quick checks</button></div>${rows}</div>`;
 }
 
 function rpSafety() {
-  const last = RP.restore ? (RP.restore.last ? esc(RP.restore.last) : 'None yet') : 'Checking...';
+  const last = RP.restore ? (RP.restore.last ? esc(RP.restore.last) : 'None yet') : 'Not checked';
   return `<div class="card grow3"><h2>Safety</h2>
     <label class="rp-opt"><input type="checkbox" data-change="rpAuto" ${RP.autoRestore ? 'checked' : ''}><span class="grow"><span>Create a restore point before changes</span></span></label>
-    <div class="rp-opt"><span class="grow" style="cursor:default"><span>Last restore point</span><span class="sub">${last}</span></span><button class="btn small" data-action="rpOpenRestore" type="button">Open</button></div>
+    <div class="rp-opt"><span class="grow" style="cursor:default"><span>Last restore point</span><span class="sub">${last}</span></span><button class="btn small" data-action="rpRestoreInfo" type="button">Check</button><button class="btn small" data-action="rpOpenRestore" type="button">Open</button></div>
     <p class="hint" style="margin-top:12px">Every change is shown first and needs your confirmation. Settings changes can be undone from History. Core Windows, the Microsoft Store, Defender and drivers are never removed, and Windows Update is never turned off.</p></div>`;
 }
 
@@ -163,6 +161,20 @@ function rpFixes() {
   return `<div class="card"><h2>Fix common Windows problems</h2><p class="hint" style="margin-bottom:16px">Every script can be read before it runs. Medium and high risk fixes always ask for confirmation.</p><div class="rp-grid">${cards}</div></div>`;
 }
 
+document.addEventListener('toggle', e => { const d = e.target; if (d && d.matches && d.matches('details.rp-group')) d.open ? RP.tkOpen.add(d.dataset.group) : RP.tkOpen.delete(d.dataset.group); }, true);
+function rpToolkit() {
+  const tk = RP.tk; if (!tk || !tk.tools) return '';
+  const groups = tk.groups.map(g => {
+    const items = tk.tools.filter(t => t.group === g.id); if (!items.length) return '';
+    const open = RP.tkOpen.has(g.id) ? 'open' : '';
+    const cards = items.map(t => `<div class="rp-fix"><div class="top"><b>${esc(t.name)}</b>${riskBadge(t.risk)}</div><span class="hint">${esc(t.desc)}</span>
+      <div class="btns"><button class="btn small primary" data-action="rpTool" data-id="${t.id}" type="button" ${RP.busy ? 'disabled' : ''}>Run</button><button class="btn small" data-action="rpToolScript" data-id="${t.id}" type="button">View script</button></div></div>`).join('');
+    return `<details class="rp-group" data-group="${g.id}" ${open}><summary>${esc(g.name)} <span class="hint">${items.length}</span></summary><div class="rp-grid">${cards}</div></details>`;
+  }).join('');
+  return `<div class="card"><div class="card-head"><h2>Toolkit</h2><button class="btn small" data-action="rpOpenReports" type="button">Open reports folder</button></div>
+    <p class="hint" style="margin-bottom:16px">Maintenance tools in groups. Nothing runs by itself: every tool starts only when you press Run. Reports are saved on the Desktop in DeepScan Reports.</p>${groups}</div>`;
+}
+
 function rpHistory() {
   const H = (RP.state.history || []);
   const rows = H.length ? H.map(h => `<div class="item"><div class="grow"><span class="title">${esc(h.title)}</span><span class="sub">${esc(h.ts)}${h.detail ? ' · ' + esc(h.detail) : ''}${h.note ? ' · ' + esc(h.note) : ''}</span></div>
@@ -184,6 +196,7 @@ ACTIONS.rpPreset = el => {
   RP.preset = el.value; const lvl = presetLevel();
   RP.selTweaks = new Set((RP.state.tweaks || []).filter(t => t.level <= lvl && !t.applied).map(t => t.id)); rpPaint();
 };
+ACTIONS.rpRestoreInfo = async () => { RP.restore = await rpBackend('restore_info'); rpPaint(); };
 ACTIONS.rpOpenRestore = () => rpBackend('restore_open');
 ACTIONS.rpRestorePoint = async () => {
   RP.busy = 'Creating a restore point...'; rpPaint();
@@ -210,7 +223,31 @@ ACTIONS.rpFix = async el => {
   const r = await rpBackend('fix_run', id);
   RP.busy = ''; await rpLoadState(); rpPaint();
   infoBox(r.ok ? `${f.name}: done` : `${f.name}: finished with errors`, `<pre>${esc(r.output || '(no output)')}</pre>`);
-  ACTIONS.rpRecheck();
+};
+ACTIONS.rpOpenReports = () => rpBackend('toolkit_open_reports');
+ACTIONS.rpToolScript = async el => {
+  const t = (RP.tk.tools || []).find(x => x.id === el.dataset.id); const r = await rpBackend('toolkit_script', el.dataset.id);
+  infoBox(t ? t.name : 'Script', `<p class="hint" style="margin-bottom:12px">PowerShell, as DeepScan would run it:</p><pre>${esc(r.script || 'Not available')}</pre>`);
+};
+ACTIONS.rpTool = async el => {
+  const id = el.dataset.id, t = (RP.tk.tools || []).find(x => x.id === id); if (!t || RP.busy) return;
+  RP.tkOpen.add(t.group);
+  if (t.risk !== 'low') {
+    const ok = await confirmBox({ title: t.name, ok: 'Run', danger: t.risk === 'high',
+      body: `<p>${esc(t.desc)}</p>${t.risk === 'high' ? '<p><b>High risk.</b> It can interrupt your work or needs a restart. Save your work first.</p>' : '<p class="hint">This changes settings on this PC.</p>'}` });
+    if (!ok) return;
+    if (t.risk === 'high' && !(await rpRestoreFirst())) return;
+  }
+  RP.busy = `Running: ${t.name}...`; rpPaint();
+  const r = await rpBackend('toolkit_run', id);
+  RP.busy = ''; await rpLoadState(); rpPaint();
+  const title = r.ok ? `${t.name}: done` : `${t.name}: finished with errors`;
+  const keep = await dialog(`<h2>${esc(title)}</h2><div class="body"><pre>${esc(r.output || '(no output)')}</pre></div>`,
+    [{ label: 'Save as text', value: 'save' }, { label: 'Close', value: true, cls: 'primary' }]);
+  if (keep === 'save') {
+    const p = await rpBackend('save_file', `${id}.txt`, r.output || '', 'text');
+    if (typeof p === 'string' && p) toast('Saved');
+  }
 };
 ACTIONS.rpRemoveApps = async () => {
   const items = (RP.bloat || []).filter(a => RP.selApps.has(a.id)); if (!items.length || RP.busy) return;

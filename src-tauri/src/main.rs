@@ -138,6 +138,22 @@ async fn fix_run(id: String) -> Value {
     blocking(move || core::repair::fix_run(&id)).await
 }
 #[tauri::command]
+fn toolkit_list() -> Value {
+    core::toolkit::list()
+}
+#[tauri::command]
+fn toolkit_script(id: String) -> Value {
+    core::toolkit::script(&id)
+}
+#[tauri::command]
+async fn toolkit_run(id: String) -> Value {
+    blocking(move || core::toolkit::run(&id)).await
+}
+#[tauri::command]
+async fn toolkit_open_reports() -> Value {
+    blocking(|| core::toolkit::open_reports()).await
+}
+#[tauri::command]
 async fn restore_info() -> Value {
     blocking(|| core::repair::restore_info()).await
 }
@@ -163,6 +179,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             scan, updates, public_ip, run_speedtest, live, speed_history, app_info, set_settings, save_file,
             repair_state, health_check, bloat_scan, bloat_remove, tweaks_apply, history_undo, fix_script, fix_run,
+            toolkit_list, toolkit_script, toolkit_run, toolkit_open_reports,
             restore_info, restore_create, restore_open, restart_now, update_check, update_install,
             defender_status, defender_pause, defender_resume
         ])

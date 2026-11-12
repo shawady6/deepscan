@@ -28,7 +28,7 @@ fn write(name: &str, data: &Value) {
 }
 
 pub fn get_settings() -> Value {
-    let mut s = json!({"theme": "dark", "hide_admin_notice": false, "auto_update_check": true, "skip_version": ""});
+    let mut s = json!({"theme": "dark", "hide_admin_notice": false, "auto_update_check": false, "skip_version": ""});
     if let Value::Object(saved) = read("settings.json", json!({})) {
         for (k, v) in saved {
             s[k] = v;
