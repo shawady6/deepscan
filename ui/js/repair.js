@@ -67,10 +67,10 @@ async function rpInit(force) {
   await rpLoadState(); RP.tk = await rpBackend('toolkit_list'); rpPaint();
 }
 function rpPaint() {
-  if (DS.route !== 'repair') return;
+  if (DS.route !== 'repair' && DS.route !== 'toolkit') return;
   const a = document.activeElement, key = a && a.closest && a.closest('[data-id],[data-change],[data-action]');
   const sel = key && (key.dataset.change ? `[data-change="${key.dataset.change}"]` : `[data-action="${key.dataset.action}"]`) + (key.dataset.id ? `[data-id="${key.dataset.id}"]` : (key.value ? `[value="${key.value}"]` : ''));
-  render('repair', false);
+  render(DS.route, false);
   if (sel) { const n = document.querySelector(sel); if (n && n.focus) n.focus({ preventScroll: true }); }
 }
 
@@ -95,7 +95,18 @@ VIEWS.repair = {
       `<button class="btn" data-action="rpRestorePoint" type="button" ${RP.busy ? 'disabled' : ''}>Create restore point</button>`);
     if (!st) return head + skeleton(320);
     const busy = RP.busy ? `<div class="notice" role="status"><span><span class="spinner"></span>&nbsp; ${esc(RP.busy)}</span></div>` : '';
-    return head + busy + rpHealth() + `<div class="row">${rpSafety()}${rpBloat()}</div>` + rpSlim() + rpFixes() + rpToolkit() + rpHistory();
+    return head + busy + rpHealth() + `<div class="row">${rpSafety()}${rpBloat()}</div>` + rpSlim() + rpHistory();
+  },
+};
+
+VIEWS.toolkit = {
+  title: 'Toolkit',
+  after() { rpInit(false); },
+  render() {
+    const head = pageHead('Toolkit', 'Fixes for common Windows problems and maintenance tools. Nothing runs until you press Run.');
+    if (!RP.state) return head + skeleton(320);
+    const busy = RP.busy ? `<div class="notice" role="status"><span><span class="spinner"></span>&nbsp; ${esc(RP.busy)}</span></div>` : '';
+    return head + busy + rpFixes() + rpToolkit();
   },
 };
 
