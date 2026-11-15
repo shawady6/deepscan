@@ -1,18 +1,33 @@
 /* Devices tab: battery health and USB flash drives (check, format). Nothing runs until a button is pressed. */
-DS.dev = { battery: null, drives: null, busy: '', batBusy: false, listBusy: false };
+DS.dev = { battery: null, drives: null, per: null, perBusy: false, busy: '', batBusy: false, listBusy: false };
 const DV = DS.dev;
 const dvCall = async (name, ...a) => { try { return await api(name, ...a); } catch (e) { return { ok: false, error: String(e), output: String(e) }; } };
-const dvPaint = () => { if (DS.route === 'devices') render('devices', false); };
+const dvPaint = () => { if (DS.route === 'devices' || DS.route === 'hardware') render(DS.route, false); };
 const dvFmt = n => n == null ? '-' : n + ' GB';
 
 VIEWS.devices = {
   title: 'Devices',
   render() {
-    const head = pageHead('Devices', 'Battery health and USB flash drives. Nothing is read or changed until you press a button.');
+    const head = pageHead('Devices', 'Everything connected to this PC: USB, Bluetooth, keyboards, mice, cameras, flash drives. Nothing is read or changed until you press a button.');
     const busy = DV.busy ? `<div class="notice" role="status"><span><span class="spinner"></span>&nbsp; ${esc(DV.busy)}</span></div>` : '';
-    return head + busy + dvBattery() + dvDrives();
+    return head + busy + dvConnected() + dvDrives();
   },
 };
+
+function dvConnected() {
+  const p = DV.per;
+  const btn = `<button class="btn small ${p ? '' : 'primary'}" data-action="dvPer" type="button" ${DV.perBusy ? 'disabled' : ''}>${p ? 'Scan again' : 'Show connected devices'}</button>`;
+  let body;
+  if (DV.perBusy) body = `<p class="hint"><span class="spinner"></span>&nbsp; Reading devices...</p>`;
+  else if (!p) body = `<p class="hint">Lists keyboards, mice, cameras, Bluetooth devices, printers, audio and other USB devices that Windows sees right now, and flags the ones with a driver problem.</p>`;
+  else if (p.error) body = `<p class="hint">${esc(p.error)}</p>`;
+  else if (!p.groups.length) body = `<p class="hint">No devices found.</p>`;
+  else body = p.groups.map(gr => `<h3 class="dv-h">${esc(gr.name)} <span class="hint">${gr.items.length}</span></h3>` + gr.items.map(i => {
+    const state = !i.ok ? badge('warn', i.problem || 'Problem', true) : i.connected === true ? badge('ok', 'Connected', true) : i.connected === false ? badge('info', 'Paired, not connected', true) : '';
+    return `<div class="item"><div class="grow"><span class="title">${esc(i.name)}</span><span class="sub">${esc(i.transport)}</span></div>${state}</div>`;
+  }).join('')).join('') + (p.demo ? '<p class="hint">Sample data.</p>' : '');
+  return `<div class="card"><div class="card-head"><h2>Connected devices</h2>${btn}</div>${body}</div>`;
+}
 
 function dvBattery() {
   const b = DV.battery;
@@ -57,6 +72,7 @@ function dvDrives() {
     <p class="hint" style="margin-top:12px">Check reads the file system without changing it, then writes a 64 MB test file on the drive, reads it back and compares it. A drive that returns different data is not reliable. USB drives do not report SMART data, so this is the most Windows can tell.</p></div>`;
 }
 
+ACTIONS.dvPer = async () => { DV.perBusy = true; dvPaint(); DV.per = await dvCall('peripherals'); DV.perBusy = false; dvPaint(); };
 ACTIONS.dvBattery = async () => { DV.batBusy = true; dvPaint(); DV.battery = await dvCall('battery_info'); DV.batBusy = false; dvPaint(); };
 ACTIONS.dvScan = async () => { DV.listBusy = true; dvPaint(); DV.drives = await dvCall('usb_list'); DV.listBusy = false; dvPaint(); };
 ACTIONS.dvOpen = el => dvCall('usb_open', el.dataset.id);

@@ -162,6 +162,7 @@ mod tests {
     fn devices_demo_and_safety() {
         use crate::devices::*;
         assert_eq!(battery()["present"], true);
+        assert!(!peripherals()["groups"].as_array().unwrap().is_empty());
         assert_eq!(usb_list()["drives"].as_array().unwrap().len(), 1);
         assert_eq!(usb_check("E")["ok"], true);
         assert_eq!(usb_check("EE")["ok"], false); // not one letter

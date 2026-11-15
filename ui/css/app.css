@@ -214,3 +214,6 @@ legend{padding:0;margin-bottom:6px;font-size:13px;font-weight:600}
 .rp-group summary::before{content:"\25B8";display:inline-block;width:18px;color:var(--muted)}
 .rp-group[open] summary::before{content:"\25BE"}
 .rp-group summary .hint{margin-left:6px;font-weight:400}
+
+.dv-h{font-size:13px;font-weight:600;color:var(--muted);margin:18px 0 4px;text-transform:none}
+.dv-h:first-of-type{margin-top:4px}

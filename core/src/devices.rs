@@ -1,4 +1,4 @@
-//! Battery health and USB flash drives: detect, check, and (after strong confirmation) format.
+//! Battery health, connected devices (USB, Bluetooth, input, cameras...), and USB flash drives: detect, check, and (after strong confirmation) format.
 //! Everything runs only when the user presses a button. Formatting is limited to removable USB disks;
 //! the system, boot and non-USB disks are refused in Rust, whatever the UI sends.
 use crate::store;
@@ -46,6 +46,76 @@ pub fn battery() -> Value {
     let status = f(g(&v, "status")) as i64;
     json!({"present": true, "design_mwh": design, "full_mwh": full, "health": health, "cycles": f(g(&v, "cycles")),
         "charge": f(g(&v, "charge")), "charging": matches!(status, 2 | 6 | 7 | 8), "grade": grade, "verdict": verdict, "name": s(g(&v, "name"))})
+}
+
+// ===================================================================== connected devices
+const PERIPHERALS: &str = r##"
+$bad = 'Root Hub|Host Controller|Composite Device|Generic USB Hub|USB Hub|Enumerator|Radio|Bluetooth Adapter|Wireless Bluetooth|Generic Bluetooth|Intel\(R\) Wireless'
+$classes = 'Mouse','Keyboard','Camera','Image','WPD','Monitor','Printer','MEDIA','USB','Bluetooth','HIDClass','Biometric','SmartCardReader','Ports'
+$rows = @()
+foreach ($d in (Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object { $classes -contains $_.Class -or $_.InstanceId -like 'USBPRINT*' })) {
+  $id = [string]$d.InstanceId; $name = [string]$d.FriendlyName; if (-not $name) { continue }
+  $tr = if ($id -like 'USB*') { 'USB' } elseif ($id -like 'BTH*') { 'Bluetooth' } else { 'Built-in' }
+  if ($d.Class -eq 'Bluetooth' -and $id -notmatch '^BTH(ENUM|LE)\\DEV_') { continue }
+  if ($d.Class -in 'USB','HIDClass','Ports','MEDIA' -and $tr -ne 'USB' -and $tr -ne 'Bluetooth') { continue }
+  if ($name -match $bad) { continue }
+  $conn = $null
+  if ($tr -eq 'Bluetooth') { try { $conn = [bool](Get-PnpDeviceProperty -InstanceId $id -KeyName '{83DA6326-97A6-4088-9453-A1923F573B29} 15' -ErrorAction Stop).Data } catch { $conn = $null } }
+  $rows += [pscustomobject]@{ name=$name; cls=[string]$d.Class; tr=$tr; status=[string]$d.Status; connected=$conn; id=$id }
+}
+ConvertTo-Json -Compress -Depth 3 -InputObject @($rows | Sort-Object name -Unique)
+"##;
+
+fn category(cls: &str, id: &str, tr: &str) -> &'static str {
+    let c = cls.to_ascii_lowercase();
+    if tr == "Bluetooth" && c == "bluetooth" {
+        return "Bluetooth devices";
+    }
+    match c.as_str() {
+        "mouse" => "Mice and pointing devices",
+        "keyboard" => "Keyboards",
+        "camera" | "image" => "Cameras and scanners",
+        "monitor" => "Monitors",
+        "printer" => "Printers",
+        "wpd" => "Phones and media players",
+        "media" => "Audio devices",
+        "biometric" | "smartcardreader" => "Security devices",
+        _ if id.starts_with("USBPRINT") => "Printers",
+        _ => "Other USB devices",
+    }
+}
+
+pub fn peripherals() -> Value {
+    if !IS_WIN {
+        return json!({"demo": true, "groups": [
+            {"name": "Keyboards", "items": [{"name": "HID Keyboard Device", "transport": "USB", "ok": true}, {"name": "Standard PS/2 Keyboard", "transport": "Built-in", "ok": true}]},
+            {"name": "Mice and pointing devices", "items": [{"name": "HID-compliant mouse", "transport": "USB", "ok": true}]},
+            {"name": "Cameras and scanners", "items": [{"name": "Integrated Camera", "transport": "Built-in", "ok": true}]},
+            {"name": "Bluetooth devices", "items": [{"name": "WH-1000XM4", "transport": "Bluetooth", "ok": true, "connected": true}, {"name": "Galaxy Buds", "transport": "Bluetooth", "ok": true, "connected": false}]},
+            {"name": "Other USB devices", "items": [{"name": "USB Mass Storage Device", "transport": "USB", "ok": false, "problem": "Driver problem"}]}]});
+    }
+    let Some(v) = ps_json(PERIPHERALS, 60) else { return json!({"ok": false, "error": "Could not list devices.", "groups": []}) };
+    let mut groups: Vec<(&str, Vec<Value>)> = Vec::new();
+    for d in as_list(&v) {
+        let (cls, id, tr) = (s(g(&d, "cls")), s(g(&d, "id")), s(g(&d, "tr")));
+        let cat = category(&cls, &id, &tr);
+        let status = s(g(&d, "status"));
+        let ok = status.is_empty() || status.eq_ignore_ascii_case("ok") || status.eq_ignore_ascii_case("unknown");
+        let mut item = json!({"name": s(g(&d, "name")), "transport": tr, "ok": ok});
+        if !ok {
+            item["problem"] = json!("Driver problem");
+        }
+        if let Some(b) = g(&d, "connected").as_bool() {
+            item["connected"] = json!(b);
+        }
+        match groups.iter_mut().find(|x| x.0 == cat) {
+            Some(x) => x.1.push(item),
+            None => groups.push((cat, vec![item])),
+        }
+    }
+    const ORDER: &[&str] = &["Keyboards", "Mice and pointing devices", "Bluetooth devices", "Cameras and scanners", "Audio devices", "Printers", "Monitors", "Phones and media players", "Security devices", "Other USB devices"];
+    groups.sort_by_key(|x| ORDER.iter().position(|o| *o == x.0).unwrap_or(99));
+    json!({"groups": groups.into_iter().map(|(n, items)| json!({"name": n, "items": items})).collect::<Vec<_>>()})
 }
 
 // ===================================================================== USB drives

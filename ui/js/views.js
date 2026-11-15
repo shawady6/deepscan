@@ -102,7 +102,7 @@ VIEWS.hardware = {
     const mem = `<div class="card grow"><div class="card-head"><h2>Memory</h2><span class="card-note">${hw.memory.total_gb} GB total${hw.memory.slots_total ? ` · ${hw.memory.modules.length} of ${hw.memory.slots_total} slots used` : ''}</span></div><div class="tw"><table class="t"><thead><tr><th>Slot</th><th>Size</th><th>Type</th><th>Maker</th></tr></thead><tbody>${mods}</tbody></table></div>${empty ? `<p class="hint" style="margin-top:12px">${empty} empty slot${empty > 1 ? 's' : ''} available for upgrades.</p>` : ''}</div>`;
     const sys = `<div class="card grow"><h2>Windows and device</h2>${kv('Windows', hw.os.name + ' ' + hw.os.version)}${kv('Build', hw.os.build + ' · ' + hw.os.arch)}${kv('Installed on', hw.os.install_date)}${kv('Computer', hw.device.name)}${kv('Manufacturer', [hw.device.maker, hw.device.model].filter(Boolean).join(' '))}${kv('Domain / workgroup', hw.device.domain)}</div>`;
     const sens = `<div class="card grow"><h2>Temperatures</h2>${hw.sensors.length ? hw.sensors.map(s => kv(s.name, s.value + ' ' + s.unit)).join('') : '<p class="hint">Windows does not share CPU and GPU temperatures without a sensor driver. Support for that is planned.</p>'}</div>`;
-    return head + `<div class="row">${cpu}${gpus}</div><div class="row">${board}${mem}</div><div class="row">${sys}${sens}</div>`;
+    return head + `<div class="row">${cpu}${gpus}</div><div class="row">${board}${mem}</div><div class="row">${sys}${sens}</div>${typeof dvBattery === 'function' ? dvBattery() : ''}`;
   },
   after() { updateChip(); },
 };
