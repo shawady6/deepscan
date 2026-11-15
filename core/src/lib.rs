@@ -1,6 +1,7 @@
 //! DeepScan core: collectors, speed test and settings. No GUI code here, so it builds and tests anywhere.
 pub mod collect;
 pub mod defender;
+pub mod devices;
 pub mod repair;
 mod demo;
 pub mod speed;
@@ -154,6 +155,20 @@ mod tests {
         assert!(TOOLS.len() >= 40);
         assert_eq!(list()["tools"].as_array().unwrap().len(), TOOLS.len());
         assert_eq!(script("nope")["ok"], false);
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn devices_demo_and_safety() {
+        use crate::devices::*;
+        assert_eq!(battery()["present"], true);
+        assert_eq!(usb_list()["drives"].as_array().unwrap().len(), 1);
+        assert_eq!(usb_check("E")["ok"], true);
+        assert_eq!(usb_check("EE")["ok"], false); // not one letter
+        assert_eq!(usb_check("1")["ok"], false);
+        assert_eq!(usb_format("E", "ext4", "x", false)["ok"], false); // unsupported file system
+        assert_eq!(usb_format("E", "fat32", "x", false)["ok"], true);
+        assert_eq!(usb_format("C:", "ntfs", "", false)["ok"], false);
     }
 
     #[test]

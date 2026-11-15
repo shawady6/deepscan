@@ -11,6 +11,7 @@ const ICONS = {
   software: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16M9 9v11"/>',
   network: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
   security: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  devices: '<rect x="7" y="3" width="10" height="10" rx="2"/><path d="M10 7v2M14 7v2M12 13v4M9 21h6M12 17v4"/>',
   toolkit: '<rect x="3" y="8" width="18" height="12" rx="2"/><path d="M9 8V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 14h18"/>',
   repair: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>',
   reports: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/>',
@@ -22,7 +23,7 @@ const icon = (name, size = 18) => `<svg width="${size}" height="${size}" viewBox
 
 const NAV = [
   ['overview', 'Overview'], ['hardware', 'Hardware'], ['storage', 'Storage'], ['software', 'Software'],
-  ['network', 'Network'], ['security', 'Security'], ['repair', 'Repair'], ['toolkit', 'Toolkit'], ['reports', 'Reports'],
+  ['network', 'Network'], ['security', 'Security'], ['repair', 'Repair'], ['toolkit', 'Toolkit'], ['devices', 'Devices'], ['reports', 'Reports'],
 ];
 const STEPS = [
   ['hardware', 'Hardware and sensors'], ['storage', 'Storage and health'], ['network', 'Network and latency'],
@@ -72,7 +73,7 @@ const DS = {
 // Positional arguments of each backend command (Tauri wants a named-argument object).
 const API_ARGS = {
   scan: ['step'], set_settings: ['patch'], save_file: ['name', 'content', 'kind'],
-  update_install: ['assetUrl', 'shaUrl'], defender_pause: ['minutes'], health_check: ['id'], bloat_remove: ['ids'], tweaks_apply: ['ids'], history_undo: ['id'], fix_script: ['id'], fix_run: ['id'], toolkit_script: ['id'], toolkit_run: ['id'],
+  update_install: ['assetUrl', 'shaUrl'], defender_pause: ['minutes'], health_check: ['id'], bloat_remove: ['ids'], tweaks_apply: ['ids'], history_undo: ['id'], fix_script: ['id'], fix_run: ['id'], toolkit_script: ['id'], usb_check: ['letter'], usb_open: ['letter'], usb_format: ['letter', 'fs', 'label', 'full'], toolkit_run: ['id'],
 };
 async function api(name, ...args) {
   const T = window.__TAURI__;

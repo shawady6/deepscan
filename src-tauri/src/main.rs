@@ -138,6 +138,26 @@ async fn fix_run(id: String) -> Value {
     blocking(move || core::repair::fix_run(&id)).await
 }
 #[tauri::command]
+async fn battery_info() -> Value {
+    blocking(|| core::devices::battery()).await
+}
+#[tauri::command]
+async fn usb_list() -> Value {
+    blocking(|| core::devices::usb_list()).await
+}
+#[tauri::command]
+async fn usb_check(letter: String) -> Value {
+    blocking(move || core::devices::usb_check(&letter)).await
+}
+#[tauri::command]
+async fn usb_format(letter: String, fs: String, label: String, full: bool) -> Value {
+    blocking(move || core::devices::usb_format(&letter, &fs, &label, full)).await
+}
+#[tauri::command]
+async fn usb_open(letter: String) -> Value {
+    blocking(move || core::devices::usb_open(&letter)).await
+}
+#[tauri::command]
 fn toolkit_list() -> Value {
     core::toolkit::list()
 }
@@ -179,6 +199,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             scan, updates, public_ip, run_speedtest, live, speed_history, app_info, set_settings, save_file,
             repair_state, health_check, bloat_scan, bloat_remove, tweaks_apply, history_undo, fix_script, fix_run,
+            battery_info, usb_list, usb_check, usb_format, usb_open,
             toolkit_list, toolkit_script, toolkit_run, toolkit_open_reports,
             restore_info, restore_create, restore_open, restart_now, update_check, update_install,
             defender_status, defender_pause, defender_resume
