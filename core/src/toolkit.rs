@@ -73,9 +73,22 @@ $hw = Join-Path $rep "Hardware_$ts.txt"
 cscript //nologo "$env:SystemRoot\System32\slmgr.vbs" /dli
 cscript //nologo "$env:SystemRoot\System32\slmgr.vbs" /xpr
 "## },
-    Tool { id: "battery", group: "report", name: "Battery report (saved)", desc: "Creates the Windows battery health report as HTML on the Desktop (laptops).", risk: "low", timeout: 90, files: true, script: r##"
+    Tool { id: "battery", group: "report", name: "Battery health report (saved)", desc: "Creates the Windows battery report (powercfg /batteryreport), prints the health percentage, and saves the HTML on the Desktop (laptops).", risk: "low", timeout: 90, files: true, script: r##"
 $f = Join-Path $rep "BatteryReport_$ts.html"
-powercfg /batteryreport /output $f
+powercfg /batteryreport /output $f | Out-Null
+if (-not (Test-Path $f)) { throw 'No battery found. This looks like a desktop PC.' }
+$h = Get-Content $f -Raw
+function Num($label) { if ($h -match "(?s)$label.*?<td>\s*([\d,\.]+)\s*(?:mWh)?\s*</td>") { [double]($Matches[1] -replace ',','') } else { 0 } }
+$design = Num 'DESIGN CAPACITY'; $full = Num 'FULL CHARGE CAPACITY'; $cyc = Num 'CYCLE COUNT'
+if ($design -gt 0 -and $full -gt 0) {
+  $pct = [math]::Round($full / $design * 100)
+  "Battery health: $pct %"
+  "Design capacity:      {0:N0} mWh" -f $design
+  "Full charge capacity: {0:N0} mWh" -f $full
+  if ($cyc -gt 0) { "Cycle count: $([int]$cyc)" }
+  if ($pct -ge 85) { 'Verdict: Healthy' } elseif ($pct -ge 70) { 'Verdict: Normal wear' } elseif ($pct -ge 50) { 'Verdict: Worn, noticeably shorter battery life' } else { 'Verdict: Badly worn, replacement recommended' }
+} else { 'Could not read the capacity numbers from the report. Open the saved HTML to see them.' }
+"Saved: $f"
 "## },
     Tool { id: "energy", group: "report", name: "Power efficiency report (saved)", desc: "Observes the PC for 60 seconds and lists power problems. Close heavy apps first.", risk: "low", timeout: 200, files: true, script: r##"
 $f = Join-Path $rep "EnergyReport_$ts.html"

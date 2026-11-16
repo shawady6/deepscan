@@ -24,6 +24,15 @@ if (-not $b -and -not $st) { '{"present":false}'; return }
 } | ConvertTo-Json -Compress
 "##;
 
+const BATTERY_REPORT: &str = r##"
+$f = Join-Path $env:TEMP 'deepscan_battery.html'
+powercfg /batteryreport /output $f | Out-Null
+if (-not (Test-Path $f)) { return }
+$h = Get-Content $f -Raw; Remove-Item $f -Force -ErrorAction SilentlyContinue
+function Num($label) { if ($h -match "(?s)$label.*?<td>\s*([\d,\.]+)\s*(?:mWh)?\s*</td>") { [double]($Matches[1] -replace ',','') } else { 0 } }
+[pscustomobject]@{ design = Num 'DESIGN CAPACITY'; full = Num 'FULL CHARGE CAPACITY'; cycles = Num 'CYCLE COUNT' } | ConvertTo-Json -Compress
+"##;
+
 pub fn battery() -> Value {
     if !IS_WIN {
         return json!({"present": true, "demo": true, "design_mwh": 50000, "full_mwh": 41500, "health": 83, "cycles": 412, "charge": 76, "charging": false,
@@ -33,8 +42,19 @@ pub fn battery() -> Value {
     if v["present"] != true {
         return json!({"present": false});
     }
-    let design = f(g(&v, "design"));
-    let full = f(g(&v, "full"));
+    let mut design = f(g(&v, "design"));
+    let mut full = f(g(&v, "full"));
+    let mut cycles = f(g(&v, "cycles"));
+    if design <= 0.0 || full <= 0.0 {
+        // Some PCs do not expose the WMI capacity classes; powercfg's own report has the same numbers.
+        if let Some(r) = ps_json(BATTERY_REPORT, 60) {
+            design = f(g(&r, "design"));
+            full = f(g(&r, "full"));
+            if cycles <= 0.0 {
+                cycles = f(g(&r, "cycles"));
+            }
+        }
+    }
     let health = if design > 0.0 && full > 0.0 { (full / design * 100.0).round().min(100.0) } else { 0.0 };
     let (grade, verdict) = match health as i64 {
         0 => ("unknown", "Windows did not report the capacity numbers for this battery"),
@@ -44,7 +64,7 @@ pub fn battery() -> Value {
         _ => ("bad", "Badly worn. Replacement recommended"),
     };
     let status = f(g(&v, "status")) as i64;
-    json!({"present": true, "design_mwh": design, "full_mwh": full, "health": health, "cycles": f(g(&v, "cycles")),
+    json!({"present": true, "design_mwh": design, "full_mwh": full, "health": health, "cycles": cycles,
         "charge": f(g(&v, "charge")), "charging": matches!(status, 2 | 6 | 7 | 8), "grade": grade, "verdict": verdict, "name": s(g(&v, "name"))})
 }
 
