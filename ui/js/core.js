@@ -176,9 +176,11 @@ function applyLive() {
   if (cb) { cb.style.width = L.cpu + '%'; cb.parentElement.className = 'bar ' + pctKind(L.cpu, 70, 90); }
   if (mb) { mb.style.width = L.mem + '%'; mb.parentElement.className = 'bar ' + pctKind(L.mem, 80, 92); }
 }
+let liveBusy = false;
 async function pollLive() {
-  if (document.hidden) return; // minimised or in the background: do no work
-  try { DS.live = await api('live'); applyLive(); } catch (e) { /* UI keeps last value */ }
+  if (document.hidden || liveBusy) return; // minimised, or the previous read has not finished: do no work
+  liveBusy = true;
+  try { DS.live = await api('live'); applyLive(); } catch (e) { /* UI keeps last value */ } finally { liveBusy = false; }
 }
 
 /* ---------- scanning ---------- */
