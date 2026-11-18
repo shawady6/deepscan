@@ -13,8 +13,13 @@ async function defRefresh() {
   }
   defPaint();
 }
-function defPaint() { if (DS.route === 'security' && DS.data.security) render('security', false); }
-function defInit() { defRefresh(); } // once per visit to the Security tab
+// Repainting the tab runs its after() hook again. defPaint sets a flag so that hook does not ask Defender for its status again (that was an endless loop).
+function defPaint() {
+  if (DS.route !== 'security' || !DS.data.security) return;
+  DF.painting = true;
+  try { render('security', false); } finally { DF.painting = false; }
+}
+function defInit() { if (!DF.painting) defRefresh(); } // once per visit to the Security tab
 
 function defCard() {
   const s = DF.st;
