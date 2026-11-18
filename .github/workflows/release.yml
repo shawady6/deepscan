@@ -44,9 +44,21 @@ jobs:
           Copy-Item target/release/DeepScan.exe DeepScan.exe
           $h = (Get-FileHash DeepScan.exe -Algorithm SHA256).Hash.ToLower()
           "$h  DeepScan.exe" | Out-File -Encoding ascii DeepScan.exe.sha256
+      - name: Build MSI installer
+        if: steps.ver.outputs.exists == 'false'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          npx --yes @tauri-apps/cli@2 build --bundles msi
+          $m = Get-ChildItem target/release/bundle/msi/*.msi | Select-Object -First 1
+          Copy-Item $m.FullName "DeepScan-${{ steps.ver.outputs.version }}-x64.msi"
       - name: Publish release
         if: steps.ver.outputs.exists == 'false'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "v${{ steps.ver.outputs.version }}" DeepScan.exe DeepScan.exe.sha256 --target "${{ github.sha }}" --title "DeepScan v${{ steps.ver.outputs.version }}" --generate-notes
+        run: |
+          $assets = @('DeepScan.exe', 'DeepScan.exe.sha256')
+          $msi = Get-ChildItem "DeepScan-*-x64.msi" -ErrorAction SilentlyContinue
+          if ($msi) { $assets += $msi.Name } else { Write-Host 'MSI was not built, publishing the exe only.' }
+          gh release create "v${{ steps.ver.outputs.version }}" @assets --target "${{ github.sha }}" --title "DeepScan v${{ steps.ver.outputs.version }}" --generate-notes
