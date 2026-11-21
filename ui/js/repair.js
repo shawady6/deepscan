@@ -67,7 +67,7 @@ async function rpInit(force) {
   await rpLoadState(); RP.tk = await rpBackend('toolkit_list'); rpPaint();
 }
 function rpPaint() {
-  if (DS.route !== 'repair' && DS.route !== 'toolkit') return;
+  if (!['repair', 'toolkit', 'quick'].includes(DS.route)) return;
   const a = document.activeElement, key = a && a.closest && a.closest('[data-id],[data-change],[data-action]');
   const sel = key && (key.dataset.change ? `[data-change="${key.dataset.change}"]` : `[data-action="${key.dataset.action}"]`) + (key.dataset.id ? `[data-id="${key.dataset.id}"]` : (key.value ? `[value="${key.value}"]` : ''));
   render(DS.route, false);
@@ -167,23 +167,39 @@ function rpSlim() {
 }
 
 function rpFixes() {
-  const cards = (RP.state.fixes || []).map(f => `<div class="rp-fix"><div class="top"><b>${esc(f.name)}</b>${riskBadge(f.risk)}</div><span class="hint">${esc(f.desc)}</span>
-    <div class="btns">${f.runnable ? `<button class="btn small primary" data-action="rpFix" data-id="${f.id}" type="button" ${RP.busy ? 'disabled' : ''}>Run</button>` : ''}<button class="btn small" data-action="rpScript" data-id="${f.id}" type="button">View script</button></div></div>`).join('');
+  const cards = (RP.state.fixes || []).map(f => itemCard({ kind: 'fix', id: f.id, name: f.name, desc: f.desc, risk: f.risk, runnable: f.runnable })).join('');
   return `<div class="card"><h2>Fix common Windows problems</h2><p class="hint" style="margin-bottom:16px">Every script can be read before it runs. Medium and high risk fixes always ask for confirmation.</p><div class="rp-grid">${cards}</div></div>`;
 }
 
 document.addEventListener('toggle', e => { const d = e.target; if (d && d.matches && d.matches('details.rp-group')) d.open ? RP.tkOpen.add(d.dataset.group) : RP.tkOpen.delete(d.dataset.group); }, true);
 function rpToolkit() {
   const tk = RP.tk; if (!tk || !tk.tools) return '';
+  const f = RP.tkRisk || 'all';
+  const chips = [['all', 'All'], ['low', 'Safe'], ['medium', 'Changes settings'], ['high', 'High risk']]
+    .map(([v, l]) => `<button class="chip" data-action="rpRisk" data-id="${v}" type="button" aria-pressed="${f === v}">${l}</button>`).join('');
   const groups = tk.groups.map(g => {
-    const items = tk.tools.filter(t => t.group === g.id); if (!items.length) return '';
-    const open = RP.tkOpen.has(g.id) ? 'open' : '';
-    const cards = items.map(t => `<div class="rp-fix"><div class="top"><b>${esc(t.name)}</b>${riskBadge(t.risk)}</div><span class="hint">${esc(t.desc)}</span>
-      <div class="btns"><button class="btn small primary" data-action="rpTool" data-id="${t.id}" type="button" ${RP.busy ? 'disabled' : ''}>Run</button><button class="btn small" data-action="rpToolScript" data-id="${t.id}" type="button">View script</button></div></div>`).join('');
+    const items = tk.tools.filter(t => t.group === g.id && (f === 'all' || t.risk === f)); if (!items.length) return '';
+    const open = (f !== 'all' || RP.tkOpen.has(g.id)) ? 'open' : '';
+    const cards = items.map(t => itemCard({ kind: 'tool', id: t.id, name: t.name, desc: t.desc, risk: t.risk })).join('');
     return `<details class="rp-group" data-group="${g.id}" ${open}><summary>${esc(g.name)} <span class="hint">${items.length}</span></summary><div class="rp-grid">${cards}</div></details>`;
-  }).join('');
+  }).join('') || '<p class="hint">No tools in this filter.</p>';
   return `<div class="card"><div class="card-head"><h2>Toolkit</h2><button class="btn small" data-action="rpOpenReports" type="button">Open reports folder</button></div>
-    <p class="hint" style="margin-bottom:16px">Maintenance tools in groups. Nothing runs by itself: every tool starts only when you press Run. Reports are saved on the Desktop in DeepScan Reports.</p>${groups}</div>`;
+    <p class="hint" style="margin-bottom:12px">Maintenance tools in groups. Nothing runs by itself: every tool starts only when you press Run. Reports are saved on the Desktop in DeepScan Reports. Press Ctrl+K to search.</p>
+    <div class="chips" role="group" aria-label="Filter by risk">${chips}</div>${groups}</div>`;
+}
+ACTIONS.rpRisk = el => { RP.tkRisk = el.dataset.id; rpPaint(); };
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); toast('Copied'); return; } catch (e) { /* fall back */ }
+  try { const a = document.createElement('textarea'); a.value = t; document.body.appendChild(a); a.select(); document.execCommand('copy'); a.remove(); toast('Copied'); } catch (e) { toast('Copy is not available here'); }
+}
+async function showOutput(title, text, fileId) {
+  for (;;) {
+    const v = await dialog(`<h2>${esc(title)}</h2><div class="body"><pre>${esc(text || '(no output)')}</pre></div>`,
+      [{ label: 'Copy', value: 'copy' }, { label: 'Save as text', value: 'save' }, { label: 'Close', value: true, cls: 'primary' }]);
+    if (v === 'copy') { await copyText(text || ''); continue; }
+    if (v === 'save') { const p = await rpBackend('save_file', `${fileId}.txt`, text || '', 'text'); if (typeof p === 'string' && p) toast('Saved'); }
+    return;
+  }
 }
 
 function rpHistory() {
@@ -230,10 +246,10 @@ ACTIONS.rpFix = async el => {
     body: `<p>${esc(f.desc)}</p>${heavy ? '<p><b>This fix changes system components.</b> A restore point is recommended.</p>' : ''}${id === 'sfc_dism' ? '<p class="hint">This can take a long time. Keep the app open.</p>' : ''}` });
   if (!ok) return;
   if (heavy && !(await rpRestoreFirst())) return;
-  RP.busy = `Running: ${f.name}...`; rpPaint();
+  RP.busy = `Running: ${f.name}...`; if (typeof recentAdd === 'function') recentAdd('fix', id); rpPaint();
   const r = await rpBackend('fix_run', id);
   RP.busy = ''; await rpLoadState(); rpPaint();
-  infoBox(r.ok ? `${f.name}: done` : `${f.name}: finished with errors`, `<pre>${esc(r.output || '(no output)')}</pre>`);
+  await showOutput(r.ok ? `${f.name}: done` : `${f.name}: finished with errors`, r.output, id);
 };
 ACTIONS.rpOpenReports = () => rpBackend('toolkit_open_reports');
 ACTIONS.rpToolScript = async el => {
@@ -249,16 +265,10 @@ ACTIONS.rpTool = async el => {
     if (!ok) return;
     if (t.risk === 'high' && !(await rpRestoreFirst())) return;
   }
-  RP.busy = `Running: ${t.name}...`; rpPaint();
+  RP.busy = `Running: ${t.name}...`; if (typeof recentAdd === 'function') recentAdd('tool', id); rpPaint();
   const r = await rpBackend('toolkit_run', id);
   RP.busy = ''; await rpLoadState(); rpPaint();
-  const title = r.ok ? `${t.name}: done` : `${t.name}: finished with errors`;
-  const keep = await dialog(`<h2>${esc(title)}</h2><div class="body"><pre>${esc(r.output || '(no output)')}</pre></div>`,
-    [{ label: 'Save as text', value: 'save' }, { label: 'Close', value: true, cls: 'primary' }]);
-  if (keep === 'save') {
-    const p = await rpBackend('save_file', `${id}.txt`, r.output || '', 'text');
-    if (typeof p === 'string' && p) toast('Saved');
-  }
+  await showOutput(r.ok ? `${t.name}: done` : `${t.name}: finished with errors`, r.output, id);
 };
 ACTIONS.rpRemoveApps = async () => {
   const items = (RP.bloat || []).filter(a => RP.selApps.has(a.id)); if (!items.length || RP.busy) return;

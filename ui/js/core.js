@@ -21,10 +21,23 @@ const ICONS = {
 };
 const icon = (name, size = 18) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
 
+// Sidebar entries. "routes" are the screens that belong to an entry; the screens of a group show a tab strip at the top.
 const NAV = [
-  ['overview', 'Overview'], ['hardware', 'Hardware'], ['storage', 'Storage'], ['software', 'Software'],
-  ['network', 'Network'], ['security', 'Security'], ['repair', 'Repair'], ['toolkit', 'Toolkit'], ['devices', 'Devices'], ['reports', 'Reports'],
+  { href: 'overview', label: 'Overview', icon: 'overview', routes: ['overview'] },
+  { href: 'hardware', label: 'This PC', icon: 'hardware', routes: ['hardware', 'storage', 'software', 'devices'] },
+  { href: 'network', label: 'Network', icon: 'network', routes: ['network'] },
+  { href: 'security', label: 'Security', icon: 'security', routes: ['security'] },
+  { href: 'quick', label: 'Fix', icon: 'repair', routes: ['quick', 'repair', 'toolkit'] },
+  { href: 'reports', label: 'Reports', icon: 'reports', routes: ['reports'] },
 ];
+const SUBNAV = [
+  [['hardware', 'Hardware'], ['storage', 'Storage'], ['software', 'Software'], ['devices', 'Devices']],
+  [['quick', 'Quick fix'], ['repair', 'Repair'], ['toolkit', 'Toolkit']],
+];
+function subnavHtml(name) {
+  const g = SUBNAV.find(list => list.some(x => x[0] === name)); if (!g) return '';
+  return `<nav class="subnav" aria-label="Section">${g.map(([id, label]) => `<a href="#/${id}" ${id === name ? 'aria-current="page"' : ''}>${label}</a>`).join('')}</nav>`;
+}
 const STEPS = [
   ['hardware', 'Hardware and sensors'], ['storage', 'Storage and health'], ['network', 'Network and latency'],
   ['security', 'Security checks'], ['software', 'Installed software and startup'],
@@ -137,13 +150,14 @@ function paintBars(root) {
   }));
 }
 function setNav(name) {
-  $$('#nav a').forEach(a => a.getAttribute('href') === '#/' + name ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
+  const item = NAV.find(n => n.routes.includes(name)), target = item ? item.href : name;
+  $$('#nav a').forEach(a => a.getAttribute('href') === '#/' + target ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
 }
 function render(name, animate = true) {
   const v = VIEWS[name]; if (!v) return;
   const el = $('#view'), y = window.scrollY;
   el.classList.remove('enter');
-  el.innerHTML = v.render();
+  el.innerHTML = subnavHtml(name) + v.render();
   if (animate) { void el.offsetWidth; el.classList.add('enter'); [...el.children].forEach((c, i) => c.style.setProperty('--i', i)); }
   paintBars(el);
   if (v.after) v.after(el);
@@ -233,7 +247,7 @@ async function checkUpdates() {
 
 /* ---------- boot ---------- */
 function buildChrome() {
-  $('#nav').innerHTML = NAV.map(([id, label]) => `<a href="#/${id}">${icon(id)}<span class="label">${label}</span></a>`).join('');
+  $('#nav').innerHTML = NAV.map(n => `<a href="#/${n.href}">${icon(n.icon)}<span class="label">${n.label}</span></a>`).join('');
   $('#themeBtn').addEventListener('click', async () => {
     const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
     applyTheme(t); try { await api('set_settings', { theme: t }); } catch (e) { /* ignore */ }
