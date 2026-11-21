@@ -147,6 +147,42 @@ Remove-Item "$env:LOCALAPPDATA\D3DSCache\*","$env:LOCALAPPDATA\NVIDIA\DXCache\*"
 Start-Process explorer.exe
 'Caches cleared. Browsers were not touched.'
 "## },
+    Tool { id: "deep_clean", group: "clean", name: "Deep clean Windows (all caches)", desc: "Temp files, Windows Update and Delivery Optimization caches, icon, thumbnail and font caches, error reports and crash dumps, shader caches, Store cache, DNS, component store and the Recycle Bin. Browsers, passwords and your documents are not touched. Explorer restarts and it can take several minutes.", risk: "medium", timeout: 2400, files: false, script: r##"
+$before = (Get-PSDrive C).Free
+function Wipe($path) { if (Test-Path $path) { Get-ChildItem $path -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue } }
+function Svc($names, $stop) { foreach ($n in $names) { if ($stop) { Stop-Service $n -Force -ErrorAction SilentlyContinue } else { Start-Service $n -ErrorAction SilentlyContinue } } }
+'1/8 Temp folders'
+Wipe $env:TEMP; Wipe "$env:SystemRoot\Temp"
+'2/8 Windows Update and Delivery Optimization caches'
+Svc 'wuauserv','bits','dosvc' $true
+Wipe "$env:SystemRoot\SoftwareDistribution\Download"
+Wipe "$env:SystemRoot\ServiceProfiles\NetworkService\AppData\Local\Microsoft\Windows\DeliveryOptimization\Cache"
+Svc 'wuauserv','bits' $false
+'3/8 Icon, thumbnail and font caches'
+Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
+Svc 'FontCache' $true
+try {
+  Remove-Item "$env:LOCALAPPDATA\IconCache.db" -Force -ErrorAction SilentlyContinue
+  Remove-Item "$env:LOCALAPPDATA\Microsoft\Windows\Explorer\iconcache*","$env:LOCALAPPDATA\Microsoft\Windows\Explorer\thumbcache*" -Force -ErrorAction SilentlyContinue
+  Wipe "$env:SystemRoot\ServiceProfiles\LocalService\AppData\Local\FontCache"
+} finally { Svc 'FontCache' $false; Start-Process explorer.exe }
+'4/8 Error reports, logs and crash dumps'
+Wipe "$env:ProgramData\Microsoft\Windows\WER"; Wipe "$env:LOCALAPPDATA\Microsoft\Windows\WER"
+Wipe "$env:SystemRoot\Minidump"; Wipe "$env:SystemRoot\LiveKernelReports"
+Remove-Item "$env:SystemRoot\MEMORY.DMP" -Force -ErrorAction SilentlyContinue
+Get-ChildItem "$env:SystemRoot\Logs\CBS\*.log" -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne 'CBS.log' } | Remove-Item -Force -ErrorAction SilentlyContinue
+'5/8 Graphics shader caches'
+foreach ($d in "$env:LOCALAPPDATA\D3DSCache","$env:LOCALAPPDATA\NVIDIA\DXCache","$env:LOCALAPPDATA\NVIDIA\GLCache","$env:LOCALAPPDATA\AMD\DxCache","$env:LOCALAPPDATA\AMD\GLCache") { Wipe $d }
+'6/8 Store cache and network caches'
+Wipe "$env:LOCALAPPDATA\Packages\Microsoft.WindowsStore_8wekyb3d8bbwe\LocalCache"
+ipconfig /flushdns | Out-Null; arp -d * | Out-Null; nbtstat -R | Out-Null
+'7/8 Component store cleanup (slow)'
+DISM /Online /Cleanup-Image /StartComponentCleanup | Out-Null
+'8/8 Recycle Bin'
+Clear-RecycleBin -Force -ErrorAction SilentlyContinue
+''
+"Done. Freed about {0:N0} MB." -f (((Get-PSDrive C).Free - $before)/1MB)
+"## },
     Tool { id: "recycle", group: "clean", name: "Empty Recycle Bin", desc: "Permanently deletes everything in the Recycle Bin on all drives.", risk: "medium", timeout: 120, files: false, script: r##"
 Clear-RecycleBin -Force -ErrorAction SilentlyContinue
 'Recycle Bin emptied.'
@@ -224,6 +260,24 @@ $gw = (Get-NetRoute -DestinationPrefix 0.0.0.0/0 | Sort-Object RouteMetric | Sel
 "Internet 1.1.1.1 -> " + (Test-Connection 1.1.1.1 -Count 2 -Quiet)
 try { $r = Resolve-DnsName microsoft.com -ErrorAction Stop | Select-Object -First 1; "DNS microsoft.com -> " + $r.IPAddress } catch { 'DNS microsoft.com -> failed' }
 Get-DnsClientServerAddress -AddressFamily IPv4 | Where-Object { $_.ServerAddresses } | ForEach-Object { "DNS servers {0}: {1}" -f $_.InterfaceAlias, ($_.ServerAddresses -join ', ') }
+"## },
+    Tool { id: "net_boost", group: "net", name: "Boost internet (refresh connection)", desc: "Flushes DNS, ARP and NetBIOS caches, refreshes the IP lease, re-enables TCP auto-tuning and receive scaling, then measures latency before and after. The connection may drop for a few seconds.", risk: "medium", timeout: 180, files: false, script: r##"
+function AvgPing { $o = ping -n 4 1.1.1.1 | Select-Object -Last 1; if ($o -match '(\d+)\s*ms\s*$') { [int]$Matches[1] } else { $null } }
+$b = AvgPing
+if ($null -ne $b) { "Latency before: $b ms" } else { 'Latency before: no reply (offline?)' }
+'Flushing DNS, ARP and NetBIOS caches...'
+ipconfig /flushdns | Out-Null; ipconfig /registerdns | Out-Null
+arp -d * | Out-Null; nbtstat -R | Out-Null; nbtstat -RR | Out-Null
+netsh interface ip delete destinationcache | Out-Null
+'Tuning TCP (auto-tuning normal, receive-side scaling on)...'
+netsh int tcp set global autotuninglevel=normal | Out-Null
+netsh int tcp set global rss=enabled | Out-Null
+'Refreshing the IP lease...'
+ipconfig /renew | Out-Null
+Start-Sleep 4
+$a = AvgPing
+if ($null -ne $a) { "Latency after:  $a ms" } else { 'Latency after: no reply yet. Wait a few seconds and run Network test.' }
+'Done. For a deeper fix use Restart network adapters or Reset TCP/IP stack.'
 "## },
     Tool { id: "adapters_restart", group: "net", name: "Restart network adapters", desc: "Disables and enables all active adapters. The connection drops for a few seconds.", risk: "medium", timeout: 120, files: false, script: r##"
 $a = Get-NetAdapter | Where-Object Status -eq 'Up'
