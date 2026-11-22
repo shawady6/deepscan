@@ -214,7 +214,7 @@ VIEWS.network = {
     const pr = n.ping.map(p => `<tr><td>${esc(p.label)} <span class="muted mono">${esc(p.target)}</span></td><td class="num mono">${p.ms == null ? '-' : p.ms + ' ms'}</td><td class="num mono">${p.loss}%</td><td class="num">${pingStatus(p)}</td></tr>`).join('') + (n.dns_ms != null ? `<tr><td>DNS lookup <span class="muted mono">google.com</span></td><td class="num mono">${n.dns_ms} ms</td><td class="num mono">-</td><td class="num">${n.dns_ms > 200 ? badge('warn', 'Slow') : badge('ok', 'OK')}</td></tr>` : '');
     const lat = `<div class="card grow"><h2>Latency and reachability</h2><div class="tw"><table class="t" style="min-width:380px"><thead><tr><th>Target</th><th class="num">Ping</th><th class="num">Loss</th><th class="num">Status</th></tr></thead><tbody>${pr}</tbody></table></div></div>`;
     const ad = `<div class="card grow"><h2>Network adapters</h2><div class="tw"><table class="t" style="min-width:380px"><thead><tr><th>Adapter</th><th>Speed</th><th class="num">Status</th></tr></thead><tbody>${n.adapters.map(x => `<tr><td>${esc(x.name)}<br><span class="card-note">${esc(x.desc)}</span></td><td class="mono">${esc(x.speed || '-')}</td><td class="num">${x.virtual && x.status === 'Up' ? badge('info', 'Virtual') : x.status === 'Up' ? badge('ok', 'Connected') : `<span class="muted">${esc(x.status)}</span>`}</td></tr>`).join('')}</tbody></table></div></div>`;
-    return head + `<div class="row">${conn}${addr}</div>${speed}<div class="row">${lat}${ad}</div>`;
+    return head + `<div class="row">${conn}${addr}</div>${speed}<div class="row">${lat}${ad}</div>${typeof wifiCard === 'function' ? wifiCard() : ''}`;
   },
 };
 

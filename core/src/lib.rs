@@ -164,6 +164,7 @@ mod tests {
         assert_eq!(battery()["present"], true);
         assert!(!peripherals()["groups"].as_array().unwrap().is_empty());
         assert_eq!(usb_list()["drives"].as_array().unwrap().len(), 1);
+        assert_eq!(wifi_profiles()["networks"].as_array().unwrap().len(), 3);
         assert_eq!(usb_check("E")["ok"], true);
         assert_eq!(usb_check("EE")["ok"], false); // not one letter
         assert_eq!(usb_check("1")["ok"], false);

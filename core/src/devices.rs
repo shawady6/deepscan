@@ -274,3 +274,40 @@ pub fn usb_open(letter: &str) -> Value {
     let (ok, _) = ps_run(&format!("Start-Process explorer.exe '{c}:\\'"), 20);
     json!({"ok": ok})
 }
+
+// ===================================================================== saved Wi-Fi passwords
+// Reads the Wi-Fi profiles saved on THIS PC with netsh (needs Administrator, which the app already asks for).
+// The profiles are exported as XML into a temporary folder, parsed, and the folder is deleted straight away.
+// Passwords are returned to the screen only. They are never stored by DeepScan and never written to History.
+const WIFI: &str = r##"
+$d = Join-Path $env:TEMP ('ds_wifi_' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory $d | Out-Null
+$rows = @()
+try {
+  netsh wlan export profile key=clear folder="$d" | Out-Null
+  $rows = @(Get-ChildItem $d -Filter *.xml | ForEach-Object {
+    $x = [xml](Get-Content $_.FullName -Raw -Encoding UTF8)
+    $p = $x.WLANProfile; $sec = $p.MSM.security
+    [pscustomobject]@{ name = [string]$p.name; auth = [string]$sec.authEncryption.authentication; password = [string]$sec.sharedKey.keyMaterial; hidden = ([string]$p.SSIDConfig.nonBroadcast -eq 'true') }
+  })
+} finally { Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue }
+ConvertTo-Json -Compress -Depth 3 -InputObject @($rows | Sort-Object name)
+"##;
+
+pub fn wifi_profiles() -> Value {
+    if !IS_WIN {
+        return json!({"demo": true, "networks": [
+            {"name": "Home-WiFi", "auth": "WPA2PSK", "password": "demo-password-1", "hidden": false},
+            {"name": "Office-Guest", "auth": "WPA2PSK", "password": "demo-password-2", "hidden": false},
+            {"name": "Company-Staff", "auth": "WPA2", "password": "", "hidden": false}]});
+    }
+    if !is_admin() {
+        return json!({"ok": false, "error": "Administrator rights are needed to read saved Wi-Fi passwords.", "networks": []});
+    }
+    let Some(v) = ps_json(WIFI, 60) else { return json!({"ok": false, "error": "Could not read the saved Wi-Fi networks.", "networks": []}) };
+    let networks: Vec<Value> = as_list(&v)
+        .iter()
+        .map(|n| json!({"name": s(g(n, "name")), "auth": s(g(n, "auth")), "password": s(g(n, "password")), "hidden": g(n, "hidden").as_bool().unwrap_or(false)}))
+        .collect();
+    json!({"networks": networks})
+}
